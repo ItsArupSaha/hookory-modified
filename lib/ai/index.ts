@@ -137,8 +137,18 @@ ${formatSpecificRules}
 - Hashtags (if used): Maximum 3 hashtags at the end. Choose hashtags based ONLY on the actual content topics and themes, NOT based on the selected options (goal, style, format). Use the most popular and relevant hashtags that match the content's core topics.
 - Character limit: Maximum ${MAX_OUTPUT_CHARS} characters (including spaces and newlines). Keep it under this limit.
 
+### BONUS OUTPUT (MANDATORY)
+After the main post, you MUST output a separator line exactly like this: "---EXTRA_HOOKS---" (ensure it is on a new line).
+Then, list exactly 3 alternative hooks for this post.
+- Format:
+1. [Hook variation 1]
+2. [Hook variation 2]
+3. [Hook variation 3]
+- Content: Just the opening hook (first 1-2 lines), not the full post.
+- Variation: Ensure they use different angles (e.g., one direct, one story, one question).
+
 ### FINAL OUTPUT
-Generate ONLY the LinkedIn post text. Do not include the "Hook variations" or analysis in the final output, just the final ready-to-post content.`
+Generate the LinkedIn post text, followed by the "---EXTRA_HOOKS---" separator and the numbered list of 3 hooks.`
 }
 
 function getUserPrompt(inputText: string): string {

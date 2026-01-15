@@ -57,6 +57,14 @@ export default function NewRepurposePage() {
     const [usageCount, setUsageCount] = useState<number | null>(null)
     const [usageLimitMonthly, setUsageLimitMonthly] = useState<number | null>(null)
 
+    // Store parsed hooks separately
+    const [responseHooks, setResponseHooks] = useState<Record<FormatKey, string[]>>({
+        "thought-leadership": [],
+        "story-based": [],
+        "educational-carousel": [],
+        "short-viral-hook": [],
+    })
+
     useEffect(() => {
         async function loadMe() {
             if (!auth) return
@@ -179,10 +187,35 @@ export default function NewRepurposePage() {
             }
 
             const outputs = data.outputs as Record<string, string>
-            setResults((prev) => ({
-                ...prev,
-                ...outputs,
-            }))
+
+            // Parse content and hooks
+            const ParsedResults = { ...results }
+            const ParsedHooks = { ...responseHooks }
+
+            Object.entries(outputs).forEach(([k, text]) => {
+                const key = k as FormatKey
+                if (text.includes("---EXTRA_HOOKS---")) {
+                    const parts = text.split("---EXTRA_HOOKS---")
+                    ParsedResults[key] = parts[0].trim()
+
+                    const hookSection = parts[1].trim()
+                    // Extract numbered lines 1. 2. 3.
+                    const hooks = hookSection
+                        .split("\n")
+                        .map(line => line.trim())
+                        .filter(line => /^\d+\./.test(line))
+                        .map(line => line.replace(/^\d+\.\s*/, "").replace(/^"/, "").replace(/"$/, "").trim())
+                        .slice(0, 3) // Ensure max 3
+
+                    ParsedHooks[key] = hooks
+                } else {
+                    ParsedResults[key] = text
+                    ParsedHooks[key] = []
+                }
+            })
+
+            setResults(ParsedResults)
+            setResponseHooks(ParsedHooks)
             toast({
                 title: "Generated",
                 description: "Your LinkedIn formats are ready.",
@@ -280,9 +313,39 @@ export default function NewRepurposePage() {
             }
 
             const outputs = data.outputs as Record<string, string>
+
+            // Parse content and hooks for single regeneration
+            const ParsedResults = { ...results }
+            const ParsedHooks = { ...responseHooks }
+
+            Object.entries(outputs).forEach(([k, text]) => {
+                const key = k as FormatKey
+                if (text.includes("---EXTRA_HOOKS---")) {
+                    const parts = text.split("---EXTRA_HOOKS---")
+                    ParsedResults[key] = parts[0].trim()
+
+                    const hookSection = parts[1].trim()
+                    const hooks = hookSection
+                        .split("\n")
+                        .map(line => line.trim())
+                        .filter(line => /^\d+\./.test(line))
+                        .map(line => line.replace(/^\d+\.\s*/, "").replace(/^"/, "").replace(/"$/, "").trim())
+                        .slice(0, 3)
+
+                    ParsedHooks[key] = hooks
+                } else {
+                    ParsedResults[key] = text
+                    ParsedHooks[key] = []
+                }
+            })
+
             setResults((prev) => ({
                 ...prev,
-                ...(outputs as any),
+                ...ParsedResults,
+            }))
+            setResponseHooks((prev) => ({
+                ...prev,
+                ...ParsedHooks,
             }))
             toast({
                 title: "Regenerated",
@@ -341,6 +404,45 @@ export default function NewRepurposePage() {
             }
             return base
         })
+    }
+
+    function handleSwapHook(key: FormatKey, newHook: string) {
+        const currentContent = results[key]
+        if (!currentContent) return
+
+        // Assume the hook is the first paragraph (up to double newline)
+        // Or if no double newline, simply replace the first non-empty block
+        const parts = currentContent.split("\n\n")
+
+        // If content has at least 2 parts (Hook + Body), swap part 0
+        if (parts.length >= 2) {
+            parts[0] = newHook
+            const newContent = parts.join("\n\n")
+            setResults(prev => ({
+                ...prev,
+                [key]: newContent
+            }))
+        } else {
+            // Fallback: Just prepend hook + newline + original (if original is short/one block)
+            // Or better: Assume the whole "first block" is the hook
+            const newContent = newHook + "\n\n" + parts.slice(1).join("\n\n")
+            // Wait, if slice(1) is empty, we just have the hook?
+            // If length is 1, it's safer to just replace it? No, that deletes the body.
+            // Let's try to find the first line break \n
+            const lines = currentContent.split("\n")
+            // If > 2 lines, assume first 1-2 are hook?
+            // Safest: Append `\n\n` + old_body_minus_first_sentence
+            // Actually, for simplicity, let's just use the split("\n\n") logic which is standard for AI posts
+            // If only 1 block, we won't swap to avoid destroying the whole post.
+            // But we can try to force it.
+            if (parts.length === 1) {
+                // If it's a short post, maybe just prepend?
+                setResults(prev => ({
+                    ...prev,
+                    [key]: newHook + "\n\n" + currentContent
+                }))
+            }
+        }
     }
 
     function handleCopy(text: string) {
@@ -741,6 +843,29 @@ export default function NewRepurposePage() {
                                                 onEdit={() => toggleEdit(key)}
                                                 onCopy={() => handleCopy(value)}
                                             />
+                                        </div>
+                                    )}
+
+                                    {/* Hook Variations */}
+                                    {!editingFormats[key] && responseHooks[key]?.length > 0 && (
+                                        <div className="mt-3 px-2">
+                                            <p className="text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                                <span className="bg-emerald-100 text-emerald-600 rounded px-1 py-0.5">NEW</span>
+                                                Alternative Hooks (Click to Swap)
+                                            </p>
+                                            <div className="grid gap-2">
+                                                {responseHooks[key].map((hook, i) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => handleSwapHook(key, hook)}
+                                                        className="text-left text-sm p-3 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-white hover:border-emerald-200 hover:shadow-sm transition-all text-stone-700 group relative overflow-hidden"
+                                                    >
+                                                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <span className="font-medium text-emerald-600 mr-2 opacity-50 text-xs">#{i + 1}</span>
+                                                        {hook}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
