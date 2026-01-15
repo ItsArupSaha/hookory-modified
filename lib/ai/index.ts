@@ -41,13 +41,13 @@ function validateInput(inputText: string): void {
   if (!inputText || inputText.trim().length === 0) {
     throw new Error("Input text cannot be empty")
   }
-  
+
   // Check for meaningful content (not just whitespace/special chars)
   const meaningfulContent = inputText.replace(/[\s\n\r\t]/g, "")
   if (meaningfulContent.length < 50) {
     throw new Error("Input text is too short. Please provide more content to repurpose.")
   }
-  
+
   if (inputText.length > MAX_INPUT_CHARS) {
     throw new Error(`Input text exceeds maximum length of ${MAX_INPUT_CHARS} characters`)
   }
@@ -62,6 +62,7 @@ You understand the "broetry" style, the importance of whitespace, and how to hoo
 ### NEGATIVE CONSTRAINTS (CRITICAL)
 - Do NOT use generic AI intro phrases like "In today's landscape," "Unlock the potential," "Delve into," "Game-changer," "Tapestry," "Leverage," "Harness," "Unveil," "Navigate," "Embark on a journey," "In the realm of," "Master the art of," "Transform your," "Elevate your," "Unlock the power of," "Dive deep," "Let's explore," "Revolutionary," or "In today's fast-paced world."
 - Do NOT use hashtags in the middle of sentences.
+- Do not mention the target audience name or group in the post. NEVER! Use them to understand - for which kind of audience are you writing the post, so that they may get attracted by that post severely.
 - Do NOT summarize the whole blog; focus only on the core value proposition.
 - Do NOT use emojis excessively; use them sparingly as bullet points or emphasis only.
 - Do NOT use markdown bolding (like **text**) because LinkedIn does not support it. Use "quotes" for emphasis instead.
@@ -90,15 +91,15 @@ function getInstructionPrompt(
     goal === "leads"
       ? "Get leads/sales"
       : goal === "authority"
-      ? "Build Authority"
-      : "Get viral engagement"
-  
+        ? "Build Authority"
+        : "Get viral engagement"
+
   const toneText = tonePreset || "Professional yet conversational"
   const audienceText = targetAudience || "General Professionals"
 
   const formatSpecificRules = getFormatRules(format, !!emojiOn)
-  
-  const regenerationInstruction = regenerate 
+
+  const regenerationInstruction = regenerate
     ? "CRITICAL: This is a retry. The previous output was rejected. You MUST write a completely different hook and angle."
     : ""
 
@@ -161,7 +162,7 @@ async function generateWithGemini(options: GenerateOptions): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey)
   // Use gemini-2.5-flash for faster, cost-effective generation
   // Alternative: "gemini-2.5-pro" for higher quality (slower, more expensive)
-  const model = genAI.getGenerativeModel({ 
+  const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     systemInstruction: getSystemPrompt() // Use native systemInstruction for better adherence
   } as any) // Type assertion needed as types may not be fully up to date
@@ -214,7 +215,7 @@ export async function generateLinkedInFormat(
   regenerate?: boolean
 ): Promise<string> {
   const normalized = normalizeInput(inputText)
-  
+
   // We check length here to protect the Engine.
   // NOTE: Your route.ts MUST check the 5k/10k limit before calling this!
   if (normalized.length > MAX_INPUT_CHARS) {
