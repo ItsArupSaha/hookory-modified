@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { auth } from "@/lib/firebase/client"
 import { User } from "firebase/auth"
+import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -336,21 +337,22 @@ export default function NewRepurposePage() {
     }
 
     return (
-        <div className="space-y-6 text-slate-900">
+        <div className="space-y-8 text-stone-900 pb-12">
             {isLimitReached && (
-                <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="rounded-3xl border border-stone-200 bg-white/80 p-6 shadow-sm backdrop-blur-md">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-1">
-                            <p className="text-sm font-semibold text-orange-900">
+                            <p className="flex items-center gap-2 text-sm font-bold text-stone-800">
+                                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                                 Monthly limit reached
                             </p>
-                            <p className="text-xs text-orange-700">
-                                You&apos;ve used {usageCount} of {usageLimitMonthly} generations this month. Upgrade to increase your limit and keep generating.
+                            <p className="text-xs text-stone-500">
+                                You&apos;ve used {usageCount} of {usageLimitMonthly} generations this month. Upgrade to increase your limit.
                             </p>
                         </div>
                         <Button
                             size="sm"
-                            className="text-xs"
+                            className="rounded-full bg-stone-900 px-6 text-xs text-white hover:bg-stone-800 shadow-lg"
                             onClick={() => router.push("/usage")}
                         >
                             Upgrade Now
@@ -358,49 +360,51 @@ export default function NewRepurposePage() {
                     </div>
                 </div>
             )}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-1">
                 <div>
-                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                    <h1 className="text-3xl font-bold tracking-tight text-stone-800 sm:text-4xl">
                         New Repurpose
                     </h1>
-                    <p className="text-xs text-slate-500">
+                    <p className="mt-1 text-sm text-stone-500 font-medium">
                         Paste your content and choose a LinkedIn format.
                     </p>
                 </div>
                 {cooldown > 0 && (
-                    <p className="text-xs text-slate-400">
-                        Cooldown: {cooldown}s before next generation
-                    </p>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
+                        <span className="h-1.5 w-1.5 rounded-full bg-stone-400 animate-pulse" />
+                        Cooldown: {cooldown}s
+                    </span>
                 )}
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-                <div className="space-y-4">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+                <div className="space-y-6">
                     {/* Input card */}
-                    <Card className="border-slate-200 bg-white">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-slate-900">
-                                Input
+                    <Card className="border-stone-200 bg-white/70 backdrop-blur-xl shadow-sm rounded-[2rem] overflow-hidden transition-all hover:shadow-md">
+                        <CardHeader className="border-b border-stone-100/50 pb-4">
+                            <CardTitle className="text-base font-bold text-stone-800 flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-xs shadow-sm">1</div>
+                                Input Source
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2 text-xs">
+                        <CardContent className="space-y-6 pt-6">
+                            <div className="flex gap-2 text-xs bg-stone-100/50 p-1.5 rounded-full w-fit">
                                 <button
-                                    className={`rounded-full px-3 py-1 text-[11px] ${tab === "text"
-                                        ? "bg-orange-500 text-white"
-                                        : "bg-slate-100 text-slate-700"
-                                        } border border-slate-200`}
+                                    className={`rounded-full px-5 py-2 text-[11px] font-medium transition-all duration-300 ${tab === "text"
+                                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-200"
+                                        : "bg-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-200/50"
+                                        }`}
                                     onClick={() => setTab("text")}
                                 >
                                     Paste Text
                                 </button>
                                 <button
-                                    className={`rounded-full px-3 py-1 text-[11px] ${tab === "url"
-                                        ? "bg-orange-500 text-white"
+                                    className={`rounded-full px-5 py-2 text-[11px] font-medium transition-all duration-300 ${tab === "url"
+                                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-200"
                                         : plan === "free"
-                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-                                            : "bg-slate-100 text-slate-700"
-                                        } border border-slate-200`}
+                                            ? "bg-transparent text-stone-400 cursor-not-allowed opacity-60"
+                                            : "bg-transparent text-stone-500 hover:text-stone-700 hover:bg-stone-200/50"
+                                        }`}
                                     onClick={() => {
                                         if (plan === "free") {
                                             toast({
@@ -416,43 +420,46 @@ export default function NewRepurposePage() {
                                 >
                                     Paste URL
                                     {plan === "free" && (
-                                        <span className="ml-1 text-[10px]">(Creator only)</span>
+                                        <span className="ml-1 text-[10px] opacity-70">(Creator only)</span>
                                     )}
                                 </button>
                             </div>
 
                             {tab === "text" ? (
-                                <div className="space-y-2">
-                                    <Label htmlFor="inputText" className="text-xs text-slate-700">
+                                <div className="space-y-3">
+                                    <Label htmlFor="inputText" className="text-xs font-semibold text-stone-600 ml-1">
                                         Content to repurpose
                                     </Label>
-                                    <Textarea
-                                        id="inputText"
-                                        value={inputText}
-                                        onChange={(e) => {
-                                            const maxLength = plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE
-                                            setInputText(e.target.value.slice(0, maxLength))
-                                        }}
-                                        rows={8}
-                                        maxLength={plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE}
-                                        placeholder="Paste your article, newsletter, or long-form content here…"
-                                    />
-                                    <p className="text-[11px] text-slate-500">
-                                        {inputText.length}/{plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE} characters
-                                    </p>
+                                    <div className="relative group">
+                                        <Textarea
+                                            id="inputText"
+                                            value={inputText}
+                                            onChange={(e) => {
+                                                const maxLength = plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE
+                                                setInputText(e.target.value.slice(0, maxLength))
+                                            }}
+                                            rows={8}
+                                            maxLength={plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE}
+                                            placeholder="Paste your article, newsletter, or long-form content here…"
+                                            className="rounded-2xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none text-sm p-4 shadow-inner"
+                                        />
+                                        <div className="absolute bottom-3 right-3 text-[10px] text-stone-400 bg-white/50 backdrop-blur px-2 py-1 rounded-full border border-stone-100">
+                                            {inputText.length}/{plan === "creator" ? MAX_INPUT_LENGTH_CREATOR : MAX_INPUT_LENGTH_FREE}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : plan === "free" ? (
-                                <div className="space-y-3 rounded-lg border-2 border-red-200 bg-red-50 p-4 text-center">
+                                <div className="space-y-4 rounded-3xl border border-stone-200 bg-stone-50/80 p-8 text-center backdrop-blur-sm">
                                     <div className="space-y-2">
-                                        <p className="text-sm font-semibold text-red-900">
-                                            URL input is available on the Creator plan
+                                        <p className="text-sm font-bold text-stone-800">
+                                            URL input is a Creator feature
                                         </p>
-                                        <p className="text-xs text-red-700">
-                                            Upgrade to unlock URL extraction and other premium features.
+                                        <p className="text-xs text-stone-500 max-w-xs mx-auto">
+                                            Upgrade to unlock URL extraction, history saving, and higher limits.
                                         </p>
                                         <Button
                                             size="sm"
-                                            className="mt-2 text-xs"
+                                            className="mt-4 rounded-full bg-emerald-600 text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-200"
                                             onClick={() => router.push("/usage")}
                                         >
                                             Upgrade to Creator
@@ -460,8 +467,8 @@ export default function NewRepurposePage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-2">
-                                    <Label htmlFor="url" className="text-xs text-slate-700">
+                                <div className="space-y-3">
+                                    <Label htmlFor="url" className="text-xs font-semibold text-stone-600 ml-1">
                                         Public URL (Medium, Notion, Google Doc)
                                     </Label>
                                     <Input
@@ -470,8 +477,9 @@ export default function NewRepurposePage() {
                                         value={url}
                                         onChange={(e) => setUrl(e.target.value)}
                                         placeholder="https://"
+                                        className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm shadow-inner"
                                     />
-                                    <p className="text-[11px] text-slate-500">
+                                    <p className="text-[11px] text-stone-500 ml-1">
                                         Paste a publicly viewable article or doc. We&apos;ll extract
                                         the readable content for you.
                                     </p>
@@ -481,17 +489,18 @@ export default function NewRepurposePage() {
                     </Card>
 
                     {/* Context card */}
-                    <Card className="border-slate-200 bg-white">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-slate-900">
+                    <Card className="border-stone-200 bg-white/70 backdrop-blur-xl shadow-sm rounded-[2rem] overflow-hidden hover:shadow-md transition-all">
+                        <CardHeader className="border-b border-stone-100/50 pb-4">
+                            <CardTitle className="text-base font-bold text-stone-800 flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-xs shadow-sm">2</div>
                                 Context
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                        <CardContent className="grid gap-5 sm:grid-cols-2 pt-6">
                             <div className="space-y-2 sm:col-span-2">
                                 <Label
                                     htmlFor="targetAudience"
-                                    className="text-xs text-slate-700"
+                                    className="text-xs font-semibold text-stone-600 ml-1"
                                 >
                                     Who is this post for?
                                 </Label>
@@ -500,98 +509,80 @@ export default function NewRepurposePage() {
                                     value={targetAudience}
                                     onChange={(e) => setTargetAudience(e.target.value)}
                                     placeholder="e.g. Founders, HR leaders, Recruiters, Developers"
-                                    className="w-full"
+                                    className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full text-sm shadow-inner"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs text-slate-700">What&apos;s your goal?</Label>
+                                <Label className="text-xs font-semibold text-stone-600 ml-1">What&apos;s your goal?</Label>
                                 <Select
                                     value={goal}
                                     onValueChange={(v) => setGoal(v as any)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
                                         <SelectValue placeholder="What's your goal?" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="engagement">
-                                            Start conversations (likes, comments, saves)
-                                        </SelectItem>
-                                        <SelectItem value="authority">
-                                            Build credibility (show expertise & insight)
-                                        </SelectItem>
-                                        <SelectItem value="leads">
-                                            Attract opportunities (clients, roles, inbound leads)
-                                        </SelectItem>
+                                    <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                        <SelectItem value="engagement">Start conversations</SelectItem>
+                                        <SelectItem value="authority">Build credibility</SelectItem>
+                                        <SelectItem value="leads">Attract opportunities</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs text-slate-700">Post style</Label>
+                                <Label className="text-xs font-semibold text-stone-600 ml-1">Post style</Label>
                                 <Select
                                     value={style}
                                     onValueChange={(v) => setStyle(v as any)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
                                         <SelectValue placeholder="Post style" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="thought-leader">
-                                            Opinion & insight (strong point of view)
-                                        </SelectItem>
-                                        <SelectItem value="storyteller">
-                                            Personal story (experience → lesson)
-                                        </SelectItem>
-                                        <SelectItem value="educator">
-                                            Teach something useful (tips, steps, frameworks)
-                                        </SelectItem>
+                                    <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                        <SelectItem value="thought-leader">Opinion & insight</SelectItem>
+                                        <SelectItem value="storyteller">Personal story</SelectItem>
+                                        <SelectItem value="educator">Teach something</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs text-slate-700">Emojis</Label>
-                                <div className="flex items-center gap-2 text-xs text-slate-600">
+                                <Label className="text-xs font-semibold text-stone-600 ml-1">Emojis</Label>
+                                <div className="flex items-center gap-3 text-xs text-stone-600">
                                     <button
                                         type="button"
                                         onClick={() => setEmojiOn(!emojiOn)}
-                                        className={`flex h-6 w-10 items-center rounded-full border px-0.5 ${emojiOn ? "border-orange-400 bg-orange-500/90" : "border-slate-300 bg-slate-100"
+                                        className={`flex h-7 w-12 items-center rounded-full border px-1 transition-all duration-300 ${emojiOn
+                                            ? "border-emerald-500 bg-emerald-500 shadow-emerald-200 shadow-md"
+                                            : "border-stone-200 bg-stone-100"
                                             }`}
                                     >
                                         <span
-                                            className={`h-5 w-5 rounded-full bg-white transition-transform ${emojiOn ? "translate-x-4" : "translate-x-0"
+                                            className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${emojiOn ? "translate-x-5" : "translate-x-0"
                                                 }`}
                                         />
                                     </button>
-                                    <span>{emojiOn ? "On" : "Off"}</span>
+                                    <span className="font-medium text-stone-500">{emojiOn ? "Enabled" : "Disabled"}</span>
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs text-slate-700">
+                                <Label className="text-xs font-semibold text-stone-600 ml-1">
                                     Writing tone
                                 </Label>
                                 <Select
                                     value={tonePreset}
                                     onValueChange={(v) => setTonePreset(v as any)}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
                                         <SelectValue placeholder="Writing tone" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="professional">
-                                            Professional (clear, confident, neutral)
-                                        </SelectItem>
-                                        <SelectItem value="conversational">
-                                            Friendly (conversational, approachable)
-                                        </SelectItem>
-                                        <SelectItem value="storytelling">
-                                            Story-driven (personal, reflective)
-                                        </SelectItem>
-                                        <SelectItem value="educational">
-                                            Instructional (clear, structured, practical)
-                                        </SelectItem>
+                                    <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                        <SelectItem value="professional">Professional</SelectItem>
+                                        <SelectItem value="conversational">Friendly</SelectItem>
+                                        <SelectItem value="storytelling">Story-driven</SelectItem>
+                                        <SelectItem value="educational">Instructional</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -599,13 +590,14 @@ export default function NewRepurposePage() {
                     </Card>
 
                     {/* Formats */}
-                    <Card className="border-slate-200 bg-white">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-semibold text-slate-900">
+                    <Card className="border-stone-200 bg-white/70 backdrop-blur-xl shadow-sm rounded-[2rem] overflow-hidden hover:shadow-md transition-all">
+                        <CardHeader className="border-b border-stone-100/50 pb-4">
+                            <CardTitle className="text-base font-bold text-stone-800 flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-xs shadow-sm">3</div>
                                 What should we generate?
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="grid gap-3 sm:grid-cols-2">
+                        <CardContent className="grid gap-3 sm:grid-cols-2 pt-6">
                             {(
                                 [
                                     ["thought-leadership", "Main LinkedIn post"],
@@ -618,43 +610,48 @@ export default function NewRepurposePage() {
                                     key={key}
                                     type="button"
                                     onClick={() => toggleFormat(key)}
-                                    className={`flex flex-col items-start rounded-md border px-3 py-2 text-left text-xs ${formats[key]
-                                        ? "border-orange-400 bg-orange-50 text-slate-900"
-                                        : "border-slate-200 bg-white text-slate-600"
+                                    className={`flex flex-col items-start rounded-2xl border px-4 py-3 text-left text-xs transition-all duration-200 ${formats[key]
+                                        ? "border-emerald-500 bg-emerald-50/50 text-emerald-900 shadow-sm ring-1 ring-emerald-500/20"
+                                        : "border-stone-200 bg-white/50 text-stone-600 hover:border-emerald-200 hover:bg-emerald-50/30"
                                         }`}
                                 >
-                                    <span className="font-medium">{label}</span>
+                                    <span className="font-bold">{label}</span>
                                 </button>
                             ))}
                         </CardContent>
                     </Card>
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-2">
                         <Button
                             onClick={handleGenerate}
                             disabled={!canGenerate || cooldown > 0}
-                            className="min-w-[160px]"
+                            className="relative h-12 min-w-[180px] overflow-hidden rounded-full bg-emerald-600 px-8 text-sm font-semibold text-white shadow-xl shadow-emerald-500/20 transition-all hover:scale-105 hover:bg-emerald-700 disabled:opacity-70"
                         >
+                            {loading && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-emerald-700">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                </span>
+                            )}
                             {loading
                                 ? "Generating…"
                                 : isLimitReached
                                     ? "Limit Reached"
                                     : cooldown > 0
                                         ? `Cooldown (${cooldown}s)`
-                                        : "Generate"}
+                                        : "Generate Content"}
                         </Button>
                     </div>
                 </div>
 
                 {/* Results */}
-                <div className="space-y-3">
-                    <h2 className="text-sm font-semibold text-slate-900">
+                <div className="space-y-4">
+                    <h2 className="text-lg font-bold text-stone-800 pl-1">
                         Outputs
                     </h2>
                     {selectedFormats.length === 0 ? (
-                        <p className="text-xs text-slate-500">
-                            Select at least one format to generate LinkedIn content.
-                        </p>
+                        <div className="flex flex-col items-center justify-center rounded-[2.5rem] border border-stone-200 bg-white/50 p-12 text-center text-stone-400">
+                            <p className="text-sm">Select a format to see preview</p>
+                        </div>
                     ) : (
                         selectedFormats.map((key) => {
                             const titleMap: Record<FormatKey, string> = {
@@ -668,19 +665,19 @@ export default function NewRepurposePage() {
                             return (
                                 <Card
                                     key={key}
-                                    className="border-slate-200 bg-white text-xs shadow-sm"
+                                    className="border-stone-200 bg-white/80 backdrop-blur-xl shadow-lg shadow-stone-200/50 rounded-[2rem] overflow-hidden transition-all hover:shadow-xl"
                                 >
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                                        <CardTitle className="text-xs font-semibold text-slate-900">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-stone-100 bg-white/50 px-6 py-4">
+                                        <CardTitle className="text-sm font-bold text-stone-800">
                                             {titleMap[key]}
                                         </CardTitle>
-                                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                            <span>{charCount} chars</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-medium text-stone-400 mr-2">{charCount} chars</span>
                                             <button
                                                 type="button"
                                                 onClick={() => handleCopy(value)}
                                                 disabled={!value || value.trim().length === 0}
-                                                className="rounded-md border border-slate-200 px-2 py-1 text-[11px] hover:border-orange-300 hover:bg-orange-50/70 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
+                                                className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
                                             >
                                                 Copy
                                             </button>
@@ -689,14 +686,14 @@ export default function NewRepurposePage() {
                                                     type="button"
                                                     onClick={() => handleRegenerate(key)}
                                                     disabled={!value || value.trim().length === 0}
-                                                    className="rounded-md border border-slate-200 px-2 py-1 text-[10px] text-slate-700 hover:border-orange-300 hover:bg-orange-50/70 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
+                                                    className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[11px] font-medium text-stone-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
                                                 >
                                                     Regenerate
                                                 </button>
                                             )}
                                         </div>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-0">
                                         <Textarea
                                             rows={Math.max(7, Math.ceil(charCount / 80))}
                                             value={value}
@@ -706,12 +703,14 @@ export default function NewRepurposePage() {
                                                     [key]: e.target.value,
                                                 }))
                                             }
-                                            className="min-h-[120px] resize-y"
+                                            className="min-h-[160px] w-full resize-y border-0 bg-transparent p-6 text-sm text-stone-700 focus:ring-0 leading-relaxed"
                                             style={{ overflowY: 'auto' }}
+                                            placeholder="Generated content will appear here..."
                                         />
-                                        <p className="mt-1 text-[10px] text-slate-500">
-                                            Regenerate and save to history are Creator features.
-                                        </p>
+                                        <div className="bg-stone-50/50 px-6 py-2 text-[10px] text-stone-400 border-t border-stone-100 flex justify-between">
+                                            <span>Markdown supported</span>
+                                            <span>Hookory writer</span>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             )
