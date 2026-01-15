@@ -1,5 +1,6 @@
 "use client"
 
+import { useAppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,6 +25,7 @@ const MAX_INPUT_LENGTH_FREE = 5000
 const MAX_INPUT_LENGTH_CREATOR = 10000
 
 export default function NewRepurposePage() {
+    const { refreshUserData } = useAppShell()
     const router = useRouter()
     const [user, setUser] = useState<User | null>(null)
     const [tab, setTab] = useState<"text" | "url">("text")
@@ -218,6 +220,10 @@ export default function NewRepurposePage() {
 
             setResults(ParsedResults)
             setResponseHooks(ParsedHooks)
+
+            // Refresh sidebar usage count
+            refreshUserData()
+
             toast({
                 title: "Generated",
                 description: "Your LinkedIn formats are ready.",
@@ -233,7 +239,7 @@ export default function NewRepurposePage() {
                     setUsageLimitMonthly(meData.usageLimitMonthly ?? 5)
                 }
             }
-            setCooldown(45)
+            setCooldown(plan === "creator" ? 30 : 45)
             const interval = setInterval(() => {
                 setCooldown((prev) => {
                     if (prev <= 1) {
@@ -354,6 +360,9 @@ export default function NewRepurposePage() {
                 title: "Regenerated",
                 description: "Updated LinkedIn format is ready.",
             })
+            // Refresh sidebar usage count
+            refreshUserData()
+
             // Refresh usage data after successful regeneration
             if (userInfo) {
                 const meRes = await fetch("/api/me", {
@@ -365,7 +374,7 @@ export default function NewRepurposePage() {
                     setUsageLimitMonthly(meData.usageLimitMonthly ?? 5)
                 }
             }
-            setCooldown(45)
+            setCooldown(plan === "creator" ? 30 : 45)
             const interval = setInterval(() => {
                 setCooldown((prev) => {
                     if (prev <= 1) {

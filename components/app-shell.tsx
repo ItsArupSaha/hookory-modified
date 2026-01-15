@@ -12,6 +12,8 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { createContext, useContext } from "react"
+
 interface MeResponse {
     plan: "free" | "creator"
     emailVerified: boolean
@@ -19,6 +21,22 @@ interface MeResponse {
     usageLimitMonthly: number
     usageResetAt: string
     stripeStatus: string | null
+}
+
+interface AppShellContextType {
+    refreshUserData: () => Promise<void>
+    me: MeResponse | null
+    loading: boolean
+}
+
+const AppShellContext = createContext<AppShellContextType | undefined>(undefined)
+
+export function useAppShell() {
+    const context = useContext(AppShellContext)
+    if (!context) {
+        throw new Error("useAppShell must be used within an AppShell")
+    }
+    return context
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -313,213 +331,215 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <div
-            className={`flex min-h-screen bg-stone-50 text-stone-900 transition-all duration-300 ease-out ${loggingOut ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"
-                }`}
-        >
-            <div className="fixed inset-0 bg-[url('/nature.jpeg')] bg-cover bg-center opacity-5 pointer-events-none z-0" />
+        <AppShellContext.Provider value={{ refreshUserData, me, loading }}>
+            <div
+                className={`flex min-h-screen bg-stone-50 text-stone-900 transition-all duration-300 ease-out ${loggingOut ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"
+                    }`}
+            >
+                <div className="fixed inset-0 bg-[url('/nature.jpeg')] bg-cover bg-center opacity-5 pointer-events-none z-0" />
 
-            {/* Sidebar */}
-            <aside className="hidden w-64 border-r border-stone-200 bg-white/80 backdrop-blur-xl px-4 py-6 shadow-sm sm:flex sm:flex-col relative z-10 transition-all duration-300">
-                <div className="mb-8 px-2">
-                    <Link href="/dashboard" className="flex items-center gap-3 group">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-emerald-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                            <Image
-                                src="/hookoryLogo.png"
-                                alt="Hookory"
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 object-contain relative z-10"
-                            />
-                        </div>
-                        <span className="text-lg font-bold tracking-tight text-stone-800 group-hover:text-emerald-700 transition-colors">
-                            Hookory
-                        </span>
-                    </Link>
-                </div>
-                <nav className="flex flex-1 flex-col gap-1.5 text-sm">
-                    <Link
-                        href="/dashboard"
-                        className={cn(
-                            "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
-                            isActive("/dashboard") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
-                        )}
-                    >
-                        New Repurpose
-                    </Link>
-                    <Link
-                        href="/history"
-                        className={cn(
-                            "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
-                            isActive("/history") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
-                        )}
-                    >
-                        History
-                        {(!me || me.plan === "free") && (
-                            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                                Pro
-                            </span>
-                        )}
-                    </Link>
-                    <Link
-                        href="/usage"
-                        className={cn(
-                            "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
-                            isActive("/usage") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
-                        )}
-                    >
-                        Usage
-                    </Link>
-                    <Link
-                        href="/settings"
-                        className={cn(
-                            "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
-                            isActive("/settings") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
-                        )}
-                    >
-                        Settings
-                    </Link>
-                </nav>
-                {me && (
-                    <div className="mt-auto px-2 pb-2">
-                        <div className="rounded-2xl border border-stone-100 bg-white/50 p-4 shadow-sm backdrop-blur-sm">
-                            <div className="flex items-center justify-between text-xs font-medium text-stone-600 mb-2">
-                                <span>Monthly Usage</span>
-                                <span className={usagePercent > 90 ? "text-red-500" : "text-emerald-600"}>
-                                    {me.usageCount}/{me.usageLimitMonthly}
-                                </span>
-                            </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-stone-100">
-                                <div
-                                    className={cn(
-                                        "h-full rounded-full transition-all duration-500",
-                                        usagePercent > 90 ? "bg-red-500" : "bg-emerald-500"
-                                    )}
-                                    style={{ width: `${usagePercent}%` }}
+                {/* Sidebar */}
+                <aside className="hidden w-64 border-r border-stone-200 bg-white/80 backdrop-blur-xl px-4 py-6 shadow-sm sm:flex sm:flex-col relative z-10 transition-all duration-300">
+                    <div className="mb-8 px-2">
+                        <Link href="/dashboard" className="flex items-center gap-3 group">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-emerald-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                                <Image
+                                    src="/hookoryLogo.png"
+                                    alt="Hookory"
+                                    width={32}
+                                    height={32}
+                                    className="h-8 w-8 object-contain relative z-10"
                                 />
                             </div>
-                            {me.plan === "free" && (
+                            <span className="text-lg font-bold tracking-tight text-stone-800 group-hover:text-emerald-700 transition-colors">
+                                Hookory
+                            </span>
+                        </Link>
+                    </div>
+                    <nav className="flex flex-1 flex-col gap-1.5 text-sm">
+                        <Link
+                            href="/dashboard"
+                            className={cn(
+                                "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
+                                isActive("/dashboard") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
+                            )}
+                        >
+                            New Repurpose
+                        </Link>
+                        <Link
+                            href="/history"
+                            className={cn(
+                                "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
+                                isActive("/history") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
+                            )}
+                        >
+                            History
+                            {(!me || me.plan === "free") && (
+                                <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                    Pro
+                                </span>
+                            )}
+                        </Link>
+                        <Link
+                            href="/usage"
+                            className={cn(
+                                "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
+                                isActive("/usage") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
+                            )}
+                        >
+                            Usage
+                        </Link>
+                        <Link
+                            href="/settings"
+                            className={cn(
+                                "rounded-xl px-3 py-2.5 text-stone-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2",
+                                isActive("/settings") && "bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-emerald-100"
+                            )}
+                        >
+                            Settings
+                        </Link>
+                    </nav>
+                    {me && (
+                        <div className="mt-auto px-2 pb-2">
+                            <div className="rounded-2xl border border-stone-100 bg-white/50 p-4 shadow-sm backdrop-blur-sm">
+                                <div className="flex items-center justify-between text-xs font-medium text-stone-600 mb-2">
+                                    <span>Monthly Usage</span>
+                                    <span className={usagePercent > 90 ? "text-red-500" : "text-emerald-600"}>
+                                        {me.usageCount}/{me.usageLimitMonthly}
+                                    </span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-stone-100">
+                                    <div
+                                        className={cn(
+                                            "h-full rounded-full transition-all duration-500",
+                                            usagePercent > 90 ? "bg-red-500" : "bg-emerald-500"
+                                        )}
+                                        style={{ width: `${usagePercent}%` }}
+                                    />
+                                </div>
+                                {me.plan === "free" && (
+                                    <Button
+                                        size="sm"
+                                        className="mt-3 w-full rounded-full bg-stone-900 text-xs text-white hover:bg-stone-800 h-8"
+                                        onClick={handleUpgrade}
+                                    >
+                                        Upgrade Plan
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </aside>
+
+                {/* Main */}
+                <div className="flex min-h-screen flex-1 flex-col relative z-10">
+                    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-200 bg-white/80 px-6 py-4 backdrop-blur-xl transition-all">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/50 px-3 py-1 text-xs font-medium text-stone-600 shadow-sm">
+                                Current Plan:
+                                <span className={cn(
+                                    "rounded-full px-2 py-0.5 text-white",
+                                    me?.plan === "creator" ? "bg-emerald-500" : "bg-stone-500"
+                                )}>
+                                    {me ? (me.plan === "creator" ? "Creator" : "Free") : "..."}
+                                </span>
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {!me ? (
+                                // Show nothing while loading to avoid flickering
+                                <div className="min-w-[100px] h-8" />
+                            ) : me.plan === "creator" ? (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="min-w-[120px] rounded-full border-stone-200 text-xs font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-all"
+                                    onClick={handleBillingPortal}
+                                    disabled={portalLoading}
+                                >
+                                    {portalLoading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span>Opening...</span>
+                                        </span>
+                                    ) : (
+                                        "Manage billing"
+                                    )}
+                                </Button>
+                            ) : (
                                 <Button
                                     size="sm"
-                                    className="mt-3 w-full rounded-full bg-stone-900 text-xs text-white hover:bg-stone-800 h-8"
+                                    className="min-w-[100px] rounded-full bg-emerald-600 text-xs font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-700 hover:scale-105 active:scale-95"
                                     onClick={handleUpgrade}
+                                    disabled={upgrading}
                                 >
-                                    Upgrade Plan
+                                    {upgrading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            <span>Redirecting...</span>
+                                        </span>
+                                    ) : (
+                                        "Upgrade"
+                                    )}
                                 </Button>
                             )}
-                        </div>
-                    </div>
-                )}
-            </aside>
-
-            {/* Main */}
-            <div className="flex min-h-screen flex-1 flex-col relative z-10">
-                <header className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-200 bg-white/80 px-6 py-4 backdrop-blur-xl transition-all">
-                    <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/50 px-3 py-1 text-xs font-medium text-stone-600 shadow-sm">
-                            Current Plan:
-                            <span className={cn(
-                                "rounded-full px-2 py-0.5 text-white",
-                                me?.plan === "creator" ? "bg-emerald-500" : "bg-stone-500"
-                            )}>
-                                {me ? (me.plan === "creator" ? "Creator" : "Free") : "..."}
-                            </span>
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {!me ? (
-                            // Show nothing while loading to avoid flickering
-                            <div className="min-w-[100px] h-8" />
-                        ) : me.plan === "creator" ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="min-w-[120px] rounded-full border-stone-200 text-xs font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-all"
-                                onClick={handleBillingPortal}
-                                disabled={portalLoading}
-                            >
-                                {portalLoading ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        <span>Opening...</span>
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setProfileOpen((open) => !open)}
+                                    className="flex items-center justify-center rounded-full border border-stone-200 bg-white p-1 hover:bg-stone-50 hover:shadow-md transition-all"
+                                >
+                                    <span className={cn(
+                                        "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-inner",
+                                        me?.plan === "creator" ? "bg-emerald-600" : "bg-stone-600"
+                                    )}>
+                                        {initials}
                                     </span>
-                                ) : (
-                                    "Manage billing"
-                                )}
-                            </Button>
-                        ) : (
-                            <Button
-                                size="sm"
-                                className="min-w-[100px] rounded-full bg-emerald-600 text-xs font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-700 hover:scale-105 active:scale-95"
-                                onClick={handleUpgrade}
-                                disabled={upgrading}
-                            >
-                                {upgrading ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        <span>Redirecting...</span>
-                                    </span>
-                                ) : (
-                                    "Upgrade"
-                                )}
-                            </Button>
-                        )}
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setProfileOpen((open) => !open)}
-                                className="flex items-center justify-center rounded-full border border-stone-200 bg-white p-1 hover:bg-stone-50 hover:shadow-md transition-all"
-                            >
-                                <span className={cn(
-                                    "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-inner",
-                                    me?.plan === "creator" ? "bg-emerald-600" : "bg-stone-600"
-                                )}>
-                                    {initials}
-                                </span>
-                            </button>
-                            {profileOpen && (
-                                <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-stone-100 bg-white p-2 shadow-xl ring-1 ring-stone-900/5 backdrop-blur-xl">
-                                    <div className="px-3 pb-2 pt-2 text-xs">
-                                        <p className="font-semibold text-stone-900">
-                                            Account
-                                        </p>
-                                        <p className="truncate text-stone-500 mt-0.5">
-                                            {firebaseUser.email ?? "Unknown email"}
-                                        </p>
+                                </button>
+                                {profileOpen && (
+                                    <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-stone-100 bg-white p-2 shadow-xl ring-1 ring-stone-900/5 backdrop-blur-xl">
+                                        <div className="px-3 pb-2 pt-2 text-xs">
+                                            <p className="font-semibold text-stone-900">
+                                                Account
+                                            </p>
+                                            <p className="truncate text-stone-500 mt-0.5">
+                                                {firebaseUser.email ?? "Unknown email"}
+                                            </p>
+                                        </div>
+                                        <div className="my-1 h-px bg-stone-100" />
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            className="flex w-full items-center rounded-xl px-3 py-2 text-left text-xs font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+                                        >
+                                            <span>Log out</span>
+                                        </button>
                                     </div>
-                                    <div className="my-1 h-px bg-stone-100" />
-                                    <button
-                                        type="button"
-                                        onClick={handleLogout}
-                                        className="flex w-full items-center rounded-xl px-3 py-2 text-left text-xs font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
-                                    >
-                                        <span>Log out</span>
-                                    </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </header>
+                    </header>
 
-                {/* Email verification banner */}
-                {me && !me.emailVerified && (
-                    <div className="border-b border-amber-200 bg-amber-50/80 px-6 py-2.5 text-xs font-medium text-amber-800 backdrop-blur-sm">
-                        <div className="mx-auto max-w-5xl flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            <p>
-                                Verify your email to generate content. Check your inbox for a
-                                verification link.
-                            </p>
+                    {/* Email verification banner */}
+                    {me && !me.emailVerified && (
+                        <div className="border-b border-amber-200 bg-amber-50/80 px-6 py-2.5 text-xs font-medium text-amber-800 backdrop-blur-sm">
+                            <div className="mx-auto max-w-5xl flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                <p>
+                                    Verify your email to generate content. Check your inbox for a
+                                    verification link.
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <main className="flex-1 px-4 py-8 sm:px-8">
-                    <div className="mx-auto max-w-6xl">{children}</div>
-                </main>
+                    <main className="flex-1 px-4 py-8 sm:px-8">
+                        <div className="mx-auto max-w-6xl">{children}</div>
+                    </main>
+                </div>
             </div>
-        </div>
+        </AppShellContext.Provider>
     )
 }
 
