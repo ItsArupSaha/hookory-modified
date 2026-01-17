@@ -10,6 +10,7 @@ const ubuntu = Ubuntu({
 })
 
 export const metadata: Metadata = {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://hookory-modified.vercel.app"),
     title: {
         default: "Hookory | Turn Blogs into LinkedIn Posts",
         template: "%s | Hookory",
