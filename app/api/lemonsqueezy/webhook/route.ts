@@ -109,6 +109,17 @@ export async function POST(req: NextRequest) {
             }
 
             if (firebaseUid) {
+                // SECURITY: Verify the variant ID matches our Creator plan
+                // This prevents users from buying a cheap $1 product to unlock the full plan
+                const variantId = attributes.variant_id.toString()
+                const expectedVariantId = process.env.LEMONSQUEEZY_VARIANT_ID
+
+                if (variantId !== expectedVariantId) {
+                    console.warn(`[Webhook] Security Alert: Received webhook for unknown variant ID: ${variantId}. Expected: ${expectedVariantId}. Ignoring.`)
+                    // We simply ignore this event. The user's plan remains unchanged (likely "free").
+                    return NextResponse.json({ received: true, ignored: "wrong_variant" })
+                }
+
                 await updateUserSubscriptionInFirestore(firebaseUid, data, customerId, userEmail)
             }
         } else if (eventName === 'order_created') {

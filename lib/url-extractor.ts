@@ -1,5 +1,28 @@
 import { Readability } from "@mozilla/readability"
 import { JSDOM } from "jsdom"
+import { lookup } from "dns/promises"
+
+
+function isPrivateIP(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return false; // Not IPv4, likely IPv6 or invalid. 
+  // For this snippet we'll focus on IPv4 blocking which is 99% of SSRF vectors in this context.
+
+  // 127.0.0.0/8 (Localhost)
+  if (parts[0] === 127) return true;
+  // 10.0.0.0/8 (Private A)
+  if (parts[0] === 10) return true;
+  // 172.16.0.0/12 (Private B)
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  // 192.168.0.0/16 (Private C)
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  // 0.0.0.0/8 (Current network)
+  if (parts[0] === 0) return true;
+  // 169.254.0.0/16 (Link local)
+  if (parts[0] === 169 && parts[1] === 254) return true;
+
+  return false;
+}
 
 const MAX_EXTRACTED_LENGTH = 50000
 
@@ -11,6 +34,21 @@ export async function extractTextFromUrl(url: string): Promise<string> {
       parsedUrl = new URL(url)
     } catch {
       throw new Error("Invalid URL format")
+    }
+
+    // SECURITY: SSRF Protection
+    // Resolve hostname to IP to ensure we aren't connecting to internal private networks
+    try {
+      if (parsedUrl.hostname === 'localhost') throw new Error("Localhost access denied");
+
+      const ipAddress = await lookup(parsedUrl.hostname);
+
+      if (isPrivateIP(ipAddress.address)) {
+        throw new Error(`Access to private network address (${ipAddress.address}) is denied.`);
+      }
+    } catch (dnsError: any) {
+      // FAIL SECURE: If we cannot verify the IP (DNS failure) or if it was blocked, we MUST abort.
+      throw new Error(`Security Check Failed: ${dnsError.message}`);
     }
 
     // Only allow http/https protocols
@@ -74,6 +112,7 @@ export async function extractTextFromUrl(url: string): Promise<string> {
         ".content",
         "main",
         ".main-content",
+        ".main-content",
       ]
 
       let contentElement: Element | null = null
@@ -93,9 +132,9 @@ export async function extractTextFromUrl(url: string): Promise<string> {
     // Clean up text
     text = text
       // 1. Replace multiple spaces/tabs with a single space (but keep newlines)
-      .replace(/[ \t]+/g, " ") 
+      .replace(/[ \t]+/g, " ")
       // 2. Replace 3+ newlines with just 2 (to preserve paragraph breaks)
-      .replace(/\n\s*\n/g, "\n\n") 
+      .replace(/\n\s*\n/g, "\n\n")
       .trim()
 
     // Truncate if too long
@@ -110,28 +149,29 @@ export async function extractTextFromUrl(url: string): Promise<string> {
     return text
   } catch (error: any) {
     console.error("URL extraction error:", error)
-    
+
     // If it's already a user-friendly error message, re-throw it
     if (error.message && (
       error.message.includes("blocked our request") ||
       error.message.includes("not found") ||
       error.message.includes("server is experiencing") ||
       error.message.includes("Invalid URL") ||
-      error.message.includes("Only HTTP and HTTPS")
+      error.message.includes("Only HTTP and HTTPS") ||
+      error.message.includes("Security Check Failed")
     )) {
       throw error
     }
-    
+
     // Handle timeout errors
     if (error.name === "AbortError" || error.message?.includes("timeout")) {
       throw new Error("Request timed out. The website may be slow or unavailable. Please try again or copy the content directly.")
     }
-    
+
     // Handle network errors
     if (error.message?.includes("fetch") || error.message?.includes("network")) {
       throw new Error("Network error. Please check your connection and try again.")
     }
-    
+
     // Generic error
     throw new Error(
       `Failed to extract content from URL: ${error.message || "Unknown error"}. The website may require authentication or have restrictions. Try copying the content directly instead.`

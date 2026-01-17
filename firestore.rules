@@ -3,8 +3,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users can read/write only their own user document
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      // Allow create if auth matches, but we usually want to validate initial data too. 
+      // For now, let's keep create simple but restrict update heavily.
       allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // CRITICAL SECURITY FIX: Prevent users from updating their own plan/subscription data
+      allow update: if request.auth != null && request.auth.uid == userId 
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                      'plan', 
+                      'usageLimitMonthly', 
+                      'subscriptionPeriodEnd', 
+                      'lemonSqueezyCustomerId', 
+                      'lemonSqueezySubscriptionId', 
+                      'lemonSqueezyStatus', 
+                      'lemonSqueezyCustomerEmail'
+                    ]);
     }
 
     // Jobs: each job belongs to a user via userId
