@@ -6,27 +6,43 @@ import { extractTextFromUrl } from "@/lib/url-extractor"
 import { checkAndResetUsage, checkCooldown, incrementUsage } from "@/lib/usage"
 import { Timestamp } from "firebase-admin/firestore"
 import { NextRequest, NextResponse } from "next/server"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const MAX_INPUT_LENGTH_FREE = 5000
 const MAX_INPUT_LENGTH_CREATOR = 10000
 
-interface GenerateBody {
-  inputType: "text" | "url"
-  inputText?: string
-  url?: string
-  context?: {
-    targetAudience?: string
-    goal?: "engagement" | "leads" | "authority"
-    style?: "thought-leader" | "storyteller" | "educator"
-    emojiOn?: boolean
-    tonePreset?: "professional" | "conversational" | "storytelling" | "educational"
-  }
-  formats: LinkedInFormat[]
-  regenerate?: boolean
-  saveHistory?: boolean
-}
+import { z } from "zod"
+
+const GenerateBodySchema = z.object({
+  inputType: z.enum(["text", "url"]),
+  inputText: z.string().optional(),
+  url: z.string().url().optional(),
+  context: z.object({
+    targetAudience: z.string().optional(),
+    goal: z.enum(["engagement", "leads", "authority"]).optional(),
+    style: z.enum(["thought-leader", "storyteller", "educator"]).optional(),
+    emojiOn: z.boolean().optional(),
+    tonePreset: z.enum(["professional", "conversational", "storytelling", "educational"]).optional(),
+  }).optional(),
+  formats: z.array(z.string()).min(1, "At least one format is required"), // We can refine the string to specific format enums if available
+  regenerate: z.boolean().optional(),
+  saveHistory: z.boolean().optional(),
+})
 
 export async function POST(req: NextRequest) {
+  // 1. DDoS Protection (Rate Limit) -> Check BEFORE Auth or DB
+  const ip = req.ip || req.headers.get("x-forwarded-for") || "unknown"
+
+  // Use unified Upstash/Memory Limiter
+  const limitResult = await checkRateLimit(ip)
+
+  if (!limitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later.", retryAfter: limitResult.retryAfter },
+      { status: 429, headers: { "Retry-After": limitResult.retryAfter?.toString() || "60" } }
+    )
+  }
+
   const authed = await getUserFromRequest(req)
   if (!authed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -41,13 +57,22 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: GenerateBody
+  let bodyData: unknown
   try {
-    body = await req.json()
+    bodyData = await req.json()
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
+  // Zod Validation
+  const result = GenerateBodySchema.safeParse(bodyData)
+
+  if (!result.success) {
+    const errorMessage = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+    return NextResponse.json({ error: `Validation Error: ${errorMessage}` }, { status: 400 })
+  }
+
+  const body = result.data
   const {
     inputType,
     inputText: rawInputText,
@@ -57,13 +82,6 @@ export async function POST(req: NextRequest) {
     regenerate = false,
     saveHistory = false,
   } = body
-
-  if (!formats || !Array.isArray(formats) || formats.length === 0) {
-    return NextResponse.json(
-      { error: "At least one format must be selected." },
-      { status: 400 }
-    )
-  }
 
   // Plan restrictions - Read from Firebase (source of truth, updated by webhooks)
   const planFromFirebase = userDoc.plan as "free" | "creator" | undefined
@@ -196,7 +214,10 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      output = await generateLinkedInFormat(format, finalInputText, resolvedContext, regenerate)
+      // Cast the string to LinkedInFormat since we know it's a string, 
+      // but ideally we should have used z.nativeEnum if LinkedInFormat was a real enum.
+      // Since it's a type union, 'as LinkedInFormat' is the standard way to bridge Zod -> Type.
+      output = await generateLinkedInFormat(format as LinkedInFormat, finalInputText, resolvedContext, regenerate)
       outputs[format] = output
       fromCache[format] = false
 
