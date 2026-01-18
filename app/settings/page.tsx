@@ -4,49 +4,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
 import { auth } from "@/lib/firebase/client"
-import { sendEmailVerification } from "firebase/auth"
 import { useEffect, useState } from "react"
 
 export default function SettingsPage() {
     const [email, setEmail] = useState<string | null>(null)
-    const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
     const [loading, setLoading] = useState(true)
-    const [sendingVerify, setSendingVerify] = useState(false)
     const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
+        // Use a listener to ensure we get the user state when it loads
         if (!auth) return
-        const user = auth.currentUser
-        if (!user) {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                setEmail(user.email)
+            }
+            // If explicit logout happens, user becomes null
             setLoading(false)
-            return
-        }
-        setEmail(user.email)
-        setEmailVerified(user.emailVerified)
-        setLoading(false)
+        })
+        return () => unsubscribe()
     }, [])
-
-    async function handleResendVerification() {
-        if (!auth) return
-        const user = auth.currentUser
-        if (!user) return
-        setSendingVerify(true)
-        try {
-            await sendEmailVerification(user)
-            toast({
-                title: "Verification email sent",
-                description: "Check your inbox and spam folder.",
-            })
-        } catch (err: any) {
-            toast({
-                title: "Failed to send verification",
-                description: err?.message || "Please try again later.",
-                variant: "destructive",
-            })
-        } finally {
-            setSendingVerify(false)
-        }
-    }
 
     async function handleDeleteAccount() {
         if (!auth) return
@@ -124,29 +100,7 @@ export default function SettingsPage() {
                                 {email ?? "Unknown"}
                             </p>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[11px] text-slate-500">Verification</p>
-                            <p className="text-xs">
-                                {emailVerified ? (
-                                    <span className="text-emerald-600">Verified</span>
-                                ) : (
-                                    <span className="text-amber-600">Not verified</span>
-                                )}
-                            </p>
-                        </div>
                     </div>
-
-                    {!emailVerified && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-slate-200 text-xs text-slate-900"
-                            onClick={handleResendVerification}
-                            disabled={sendingVerify}
-                        >
-                            {sendingVerify ? "Sending…" : "Resend verification email"}
-                        </Button>
-                    )}
                 </CardContent>
             </Card>
 
@@ -176,4 +130,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-
