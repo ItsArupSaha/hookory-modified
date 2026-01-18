@@ -23,7 +23,7 @@ export const metadata: Metadata = {
         siteName: "Hookory",
         images: [
             {
-                url: "/hookoryLogo.png",
+                url: "/hookory_Logo_light_nobg.png",
                 width: 1200,
                 height: 630,
             },
@@ -35,11 +35,11 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "Hookory - Repurpose Content for LinkedIn",
         description: "Paste a URL, get viral LinkedIn posts. Better quality than $20-50/month tools — only $9.99/month.",
-        images: ["/hookoryLogo.png"],
+        images: ["/hookory_Logo_light_nobg.png"],
     },
     icons: {
-        icon: "/hookoryLogo.png",
-        apple: "/hookoryLogo.png",
+        icon: "/hookory_Logo_light.png",
+        apple: "/hookory_Logo_light.png", // Using the same valid image for apple touch icon for consistency
     },
 }
 

@@ -366,20 +366,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {/* Sidebar */}
                 <aside className="hidden w-64 border-r border-stone-200 bg-white/80 backdrop-blur-xl px-4 py-6 shadow-sm sm:flex sm:flex-col relative z-10 transition-all duration-300">
                     <div className="mb-8 px-2">
-                        <Link href="/dashboard" className="flex items-center gap-3 group">
-                            <div className="relative">
-                                <div className="absolute inset-0 bg-emerald-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                                <Image
-                                    src="/hookoryLogo.png"
-                                    alt="Hookory"
-                                    width={32}
-                                    height={32}
-                                    className="h-8 w-8 object-contain relative z-10"
-                                />
-                            </div>
-                            <span className="text-lg font-bold tracking-tight text-stone-800 group-hover:text-emerald-700 transition-colors">
-                                Hookory
-                            </span>
+                        <Link href="/dashboard" className="flex items-center group">
+                            <Image
+                                src="/hookory_Logo_light_nobg.png"
+                                alt="Hookory"
+                                width={160}
+                                height={160}
+                                className="h-40 w-40 -my-16 -ml-10 object-contain relative z-10"
+                            />
                         </Link>
                     </div>
                     <nav className="flex flex-1 flex-col gap-1.5 text-sm">
