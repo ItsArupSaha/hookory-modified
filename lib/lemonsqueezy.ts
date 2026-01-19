@@ -139,8 +139,25 @@ export async function checkLemonSqueezySubscriptionStatus(
 export async function syncLemonSqueezyToFirestore(
     uid: string,
     subscriptionStatus: SubscriptionStatus
-): Promise<void> {
+): Promise<{ updated: boolean }> {
     try {
+        const userRef = adminDb.collection("users").doc(uid)
+        const userDoc = await userRef.get()
+        const currentData = userDoc.data()
+
+        // IDEMPOTENCY CHECK: Skip update if already synced with same status & subscription ID
+        if (currentData) {
+            const alreadySynced =
+                currentData.lemonSqueezyStatus === subscriptionStatus.status &&
+                currentData.lemonSqueezySubscriptionId === subscriptionStatus.subscriptionId &&
+                currentData.plan === (subscriptionStatus.hasCreatorAccess ? "creator" : "free")
+
+            if (alreadySynced) {
+                console.log(`[Sync] Skipping Firestore update for user ${uid} - already synced.`)
+                return { updated: false }
+            }
+        }
+
         const updateData: any = {
             lemonSqueezyStatus: subscriptionStatus.status,
             plan: subscriptionStatus.hasCreatorAccess ? "creator" : "free",
@@ -162,10 +179,11 @@ export async function syncLemonSqueezyToFirestore(
             )
         }
 
-
-
-        await adminDb.collection("users").doc(uid).update(updateData)
+        await userRef.update(updateData)
+        console.log(`[Sync] Updated Firestore for user ${uid}: plan=${updateData.plan}, status=${updateData.lemonSqueezyStatus}`)
+        return { updated: true }
     } catch (err) {
         console.error("Failed to sync Lemon Squeezy data to Firestore:", err)
+        return { updated: false }
     }
 }

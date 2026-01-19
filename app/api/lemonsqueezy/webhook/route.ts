@@ -125,17 +125,51 @@ export async function POST(req: NextRequest) {
                 await updateUserSubscriptionInFirestore(firebaseUid, data, customerId, userEmail)
             }
         } else if (eventName === 'subscription_payment_success') {
-            // Send Payment Success Email
+            // Send Payment Success Email (with idempotency check)
             const userEmail = attributes.user_email
             const userName = attributes.user_name || "Creator"
-            // We can assume it's the Creator plan if it comes here from our product
-            if (userEmail) {
-                const emailHtml = getPaymentSuccessEmailTemplate(userName, "Creator")
-                await sendEmail({
-                    to: userEmail,
-                    subject: "Payment Successful - Hookory",
-                    html: emailHtml
-                })
+            const invoiceId = data.id // Unique invoice/payment ID from Lemon Squeezy
+
+            if (userEmail && invoiceId) {
+                // Find user by email to check if email was already sent for this invoice
+                const usersSnap = await adminDb.collection("users").where("email", "==", userEmail).limit(1).get()
+
+                if (!usersSnap.empty) {
+                    const userDoc = usersSnap.docs[0]
+                    const userData = userDoc.data()
+
+                    // IDEMPOTENCY CHECK: Skip if email was already sent for this invoice
+                    if (userData.lastPaymentEmailSentForInvoice === invoiceId) {
+                        console.log(`[Webhook] Skipping duplicate payment success email for invoice ${invoiceId}`)
+                    } else {
+                        // Send email and mark as sent ONLY if successful
+                        const emailHtml = getPaymentSuccessEmailTemplate(userName, "Creator")
+                        const emailResult = await sendEmail({
+                            to: userEmail,
+                            subject: "Payment Successful - Hookory",
+                            html: emailHtml
+                        })
+
+                        // Only update the flag if email was successfully sent
+                        if (emailResult.success) {
+                            await userDoc.ref.update({
+                                lastPaymentEmailSentForInvoice: invoiceId
+                            })
+                            console.log(`[Webhook] Payment success email sent for invoice ${invoiceId}`)
+                        } else {
+                            console.error(`[Webhook] Failed to send payment success email for invoice ${invoiceId}`)
+                        }
+                    }
+                } else {
+                    // User not found, still send email (edge case)
+                    const emailHtml = getPaymentSuccessEmailTemplate(userName, "Creator")
+                    await sendEmail({
+                        to: userEmail,
+                        subject: "Payment Successful - Hookory",
+                        html: emailHtml
+                    })
+                    console.log(`[Webhook] Payment success email sent (user not in DB)`)
+                }
             }
         } else if (eventName === 'subscription_payment_failed') {
             // Send Payment Declined Email

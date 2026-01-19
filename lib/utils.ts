@@ -38,8 +38,8 @@ export function getLocalStoragePaymentStatus(): "creator" | null {
     const now = Date.now()
     const elapsed = now - timestamp
 
-    // If within 1 minute (60000ms), return the stored plan
-    if (elapsed < 60000 && plan === "creator") {
+    // If within 2 minutes (120000ms), return the stored plan
+    if (elapsed < 120000 && plan === "creator") {
       return "creator"
     } else {
       // Clear expired status

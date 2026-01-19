@@ -155,95 +155,105 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         return () => unsub()
     }, [router, pathname, refreshUserData])
 
-    // Handle successful payment: store in localStorage and set up real-time listener
+    // State for payment processing spinner
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+    const syncCalledRef = useRef(false) // Ensure only ONE sync call ever
+
+    // STEP 1: Detect payment success on mount - immediately start spinner
     useEffect(() => {
-        if (typeof window === "undefined" || !firebaseUser || !db) return
+        if (typeof window === "undefined") return
 
         const urlParams = new URLSearchParams(window.location.search)
         const sessionId = urlParams.get("session_id")
 
         if (sessionId) {
-            console.log("[AppShell] Payment successful detected, storing in localStorage")
+            console.log("[AppShell] Payment successful! session_id detected in URL")
 
-            // Immediately store payment status in localStorage
+            // Store payment status in localStorage (2 minute window)
             setLocalStoragePaymentStatus("creator")
 
-            // Update UI immediately
-            if (me) {
-                setMe({
-                    ...me,
-                    plan: "creator",
-                    usageLimitMonthly: 100,
-                })
-            }
+            // Show spinner immediately
+            setIsProcessingPayment(true)
 
-            // Remove session_id from URL
+            // Clean URL
             const url = new URL(window.location.href)
             url.searchParams.delete("session_id")
             window.history.replaceState({}, "", url.toString())
 
-            // TRIGGER IMMEDIATE SYNC (Fix for user issue: Firebase not updating fast enough)
-            if (firebaseUser) {
-                console.log("[AppShell] Triggering IMMEDIATE sync on payment success.")
-                firebaseUser.getIdToken().then(token => {
-                    fetch("/api/lemonsqueezy/sync", {
-                        method: "POST",
-                        headers: { "Authorization": `Bearer ${token}` }
-                    }).then(() => {
-                        console.log("[AppShell] Immediate sync completed.")
-                        refreshUserData()
-                    }).catch(e => console.error("[AppShell] Immediate sync failed:", e))
+            console.log("[AppShell] Spinner activated. Will make ONE sync call when auth is ready.")
+        } else {
+            // Check if paymentStatus exists in localStorage (handles page refresh)
+            const storedPlan = getLocalStoragePaymentStatus()
+            if (storedPlan === "creator") {
+                console.log("[AppShell] Found paymentStatus in localStorage - resuming spinner")
+                setIsProcessingPayment(true)
+            }
+        }
+    }, []) // Runs once on mount
+
+    // STEP 2: Make ONE sync call when auth is ready
+    useEffect(() => {
+        // Only run when in processing mode AND auth is ready
+        if (!isProcessingPayment || !firebaseUser || !db) return
+
+        // CRITICAL: Ensure only ONE sync call ever happens
+        if (syncCalledRef.current) {
+            console.log("[AppShell] Sync already called, skipping")
+            return
+        }
+        syncCalledRef.current = true
+
+        // Verify paymentStatus is still valid
+        const storedPlan = getLocalStoragePaymentStatus()
+        if (storedPlan !== "creator") {
+            console.log("[AppShell] paymentStatus expired, stopping")
+            setIsProcessingPayment(false)
+            syncCalledRef.current = false
+            return
+        }
+
+        // Update me state for immediate UI feedback
+        if (me && me.plan !== "creator") {
+            setMe({ ...me, plan: "creator", usageLimitMonthly: 100 })
+        }
+
+        console.log("[AppShell] Auth ready. Making ONE sync call...")
+
+        const doSync = async () => {
+            try {
+                const token = await firebaseUser.getIdToken()
+                console.log("[AppShell] Calling sync endpoint (ONE time only)...")
+
+                const syncRes = await fetch("/api/lemonsqueezy/sync", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` }
                 })
-            }
 
-            // Set up Firebase real-time listener after 1 minute
-            // Sync with Lemon Squeezy after 1 minute (to handle localhost/webhook delays)
-            localStorageTimeoutRef.current = setTimeout(async () => {
-                console.log("[AppShell] 1 minute passed. Triggering manual sync and clearing local storage.")
+                if (syncRes.ok) {
+                    const syncData = await syncRes.json()
+                    console.log("[AppShell] Sync response:", syncData)
 
-                // 1. Force Sync
-                if (firebaseUser) {
-                    try {
-                        const token = await firebaseUser.getIdToken()
-                        await fetch("/api/lemonsqueezy/sync", {
-                            method: "POST",
-                            headers: {
-                                "Authorization": `Bearer ${token}`
-                            }
-                        })
-                        console.log("[AppShell] Sync completed.")
-                    } catch (e) {
-                        console.error("[AppShell] Sync failed:", e)
+                    if (syncData.complete === true) {
+                        console.log("[AppShell] SUCCESS! Email sent and Firestore updated.")
+                    } else {
+                        console.log("[AppShell] Sync returned but not complete:", syncData)
                     }
+                } else {
+                    console.error("[AppShell] Sync request failed:", syncRes.status)
                 }
-
-                // 2. Clear local storage
+            } catch (e) {
+                console.error("[AppShell] Sync call failed:", e)
+            } finally {
+                // Always stop spinner and clean up after the ONE call
+                setIsProcessingPayment(false)
                 clearLocalStoragePaymentStatus()
-
-                // 3. Refresh data from Firebase (now updated)
                 refreshUserData()
-
-                // 4. Set up real-time listener for future updates
-                if (db) {
-                    const userDocRef = doc(db, "users", firebaseUser.uid)
-                    const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-                        // Simply refreshing data on snapshot is enough as refreshUserData handles state
-                        refreshUserData()
-                    }, (error) => {
-                        console.error("[AppShell] Firebase real-time listener error:", error)
-                    })
-                    realtimeListenerRef.current = unsubscribe
-                }
-
-            }, 60000) // 1 minute
-        }
-
-        return () => {
-            if (localStorageTimeoutRef.current) {
-                clearTimeout(localStorageTimeoutRef.current)
+                console.log("[AppShell] Spinner stopped.")
             }
         }
-    }, [pathname, firebaseUser, me, refreshUserData])
+
+        doSync()
+    }, [isProcessingPayment, firebaseUser, db, me, refreshUserData])
 
     // Clean up real-time listener on unmount
     useEffect(() => {
@@ -483,6 +493,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                                     {me ? (me.plan === "creator" ? "Creator" : "Free") : "..."}
                                 </span>
                             </span>
+                            {/* Payment Processing Spinner */}
+                            {isProcessingPayment && (
+                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 shadow-sm animate-pulse">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Setting up your creator plan...
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-4">
                             {!me ? (
