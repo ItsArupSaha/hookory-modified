@@ -10,6 +10,7 @@ import {
     GoogleAuthProvider,
     signInWithEmailAndPassword,
     signInWithPopup,
+    sendPasswordResetEmail,
 } from "firebase/auth"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -22,13 +23,13 @@ export default function LoginPage() {
     const [password, setPassword] = useState("")
     const [loadingEmail, setLoadingEmail] = useState(false)
     const [loadingGoogle, setLoadingGoogle] = useState(false)
+    const [loadingReset, setLoadingReset] = useState(false)
 
     async function handleGoogle() {
         if (!auth) return
         setLoadingGoogle(true)
         try {
             const provider = new GoogleAuthProvider()
-            // Customize OAuth flow
             provider.setCustomParameters({
                 prompt: "select_account",
             })
@@ -64,6 +65,36 @@ export default function LoginPage() {
             })
         } finally {
             setLoadingEmail(false)
+        }
+    }
+
+    async function handleForgotPassword() {
+        if (!auth) return
+        if (!email || !email.includes("@")) {
+            toast({
+                title: "Enter your email",
+                description: "Please enter your email address first.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        setLoadingReset(true)
+        try {
+            await sendPasswordResetEmail(auth, email)
+            toast({
+                title: "Reset email sent",
+                description: "Check your inbox for password reset instructions.",
+            })
+        } catch (err: any) {
+            console.error(err)
+            toast({
+                title: "Failed to send reset email",
+                description: err?.message || "Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setLoadingReset(false)
         }
     }
 
@@ -143,7 +174,17 @@ export default function LoginPage() {
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="password" className="text-xs font-medium text-stone-600 ml-1">Password</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password" className="text-xs font-medium text-stone-600 ml-1">Password</Label>
+                                <button
+                                    type="button"
+                                    onClick={handleForgotPassword}
+                                    disabled={loadingReset}
+                                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline disabled:opacity-50"
+                                >
+                                    {loadingReset ? "Sending..." : "Forgot password?"}
+                                </button>
+                            </div>
                             <Input
                                 id="password"
                                 type="password"
@@ -173,4 +214,3 @@ export default function LoginPage() {
         </main>
     )
 }
-

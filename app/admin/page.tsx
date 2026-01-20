@@ -110,7 +110,7 @@ export default function AdminDashboard() {
                 <div>
                     <h1 className="text-3xl font-bold text-stone-900">Dashboard Overview</h1>
                     <p className="text-stone-500">
-                        Welcome to the admin panel. Here's what's happening with Hookory.
+                        Welcome to the admin panel. Here&apos;s what&apos;s happening with Hookory.
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
