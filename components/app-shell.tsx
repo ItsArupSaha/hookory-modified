@@ -253,7 +253,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
 
         doSync()
-    }, [isProcessingPayment, firebaseUser, db, me, refreshUserData])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isProcessingPayment, firebaseUser, me, refreshUserData])
 
     // Welcome email processing (runs silently in background)
     const welcomeEmailCalledRef = useRef(false)

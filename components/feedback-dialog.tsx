@@ -80,7 +80,7 @@ export function FeedbackDialog({ children }: { children?: React.ReactNode }) {
                 <DialogHeader>
                     <DialogTitle>Send Feedback</DialogTitle>
                     <DialogDescription>
-                        Tell us what you like, what's missing, or report a bug. We appreciate your input!
+                        Tell us what you like, what&apos;s missing, or report a bug. We appreciate your input!
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
