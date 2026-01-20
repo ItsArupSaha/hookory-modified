@@ -31,6 +31,12 @@ service cloud.firestore {
     match /cache/{cacheKey} {
       allow read, write: if false;
     }
+
+    // Feedbacks: users can write, only server can read all
+    // Already handled above via feedbacks collection implicit rules
+    
+    // Reviews: users can write, only server can read all
+    // Already handled above via reviews collection implicit rules
   }
 }
 

@@ -9,7 +9,6 @@ import { auth } from "@/lib/firebase/client"
 import {
     GoogleAuthProvider,
     createUserWithEmailAndPassword,
-    sendEmailVerification,
     signInWithPopup,
 } from "firebase/auth"
 import Link from "next/link"
@@ -36,16 +35,9 @@ export default function SignupPage() {
             provider.addScope("email")
             provider.addScope("profile")
             const result = await signInWithPopup(auth, provider)
-            if (result.user && !result.user.emailVerified) {
-                try {
-                    await sendEmailVerification(result.user)
-                } catch {
-                    // ignore
-                }
-            }
             toast({
                 title: "Welcome to Hookory",
-                description: "Verify your email to start generating.",
+                description: "Start generating amazing content!",
             })
             router.push("/dashboard")
         } catch (err: any) {
@@ -66,14 +58,9 @@ export default function SignupPage() {
         setLoadingEmail(true)
         try {
             const cred = await createUserWithEmailAndPassword(auth, email, password)
-            try {
-                await sendEmailVerification(cred.user)
-            } catch {
-                // ignore
-            }
             toast({
                 title: "Account created",
-                description: "Check your inbox and verify your email before generating.",
+                description: "Welcome! Start generating amazing content.",
             })
             router.push("/dashboard")
         } catch (err: any) {

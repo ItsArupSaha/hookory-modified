@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     },
     icons: {
         icon: "/hookory_Logo_light.png",
-        apple: "/hookory_Logo_light.png", // Using the same valid image for apple touch icon for consistency
+        apple: "/hookory_Logo_light.png",
     },
 }
 

@@ -11,9 +11,6 @@ export class UserService {
     }
 
     static async validatePlan(userDoc: any, inputType: string, regenerate: boolean) {
-        if (!userDoc.emailVerified) {
-            throw new Error("Email not verified. Please verify your email to generate.")
-        }
 
         // Plan restrictions - Read from Firebase
         const planFromFirebase = userDoc.plan as "free" | "creator" | undefined
