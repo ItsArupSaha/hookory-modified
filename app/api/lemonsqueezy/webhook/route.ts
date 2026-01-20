@@ -3,7 +3,7 @@ import { Timestamp } from "firebase-admin/firestore"
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 import { sendEmail } from "@/lib/email"
-import { getPaymentSuccessEmailTemplate, getPaymentDeclinedEmailTemplate, getSubscriptionEndedEmailTemplate } from "@/lib/email-templates"
+import { getPaymentSuccessEmailTemplate, getPaymentDeclinedEmailTemplate, getSubscriptionEndedEmailTemplate } from "@/lib/emails/templates"
 
 export const runtime = "nodejs"
 

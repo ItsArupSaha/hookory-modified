@@ -1,6 +1,6 @@
 import { getUserFromRequest } from "@/lib/auth-server"
 import { sendEmail } from "@/lib/email"
-import { getWelcomeEmailTemplate } from "@/lib/email-templates"
+import { getWelcomeEmailTemplate } from "@/lib/emails/templates"
 import { adminDb } from "@/lib/firebase/admin"
 import { Timestamp } from "firebase-admin/firestore"
 import { NextRequest, NextResponse } from "next/server"

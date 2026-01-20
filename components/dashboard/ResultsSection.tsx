@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { LinkedInPostPreview } from "@/components/linkedin-post-preview"
+import { LinkedInPostPreview } from "@/components/features/linkedin-post-preview"
 import { User } from "firebase/auth"
 import { Loader2 } from "lucide-react"
 import { FormatKey } from "./types"

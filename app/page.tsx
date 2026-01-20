@@ -1,6 +1,6 @@
 "use client"
 
-import SiteFooter from "@/components/site-footer"
+import SiteFooter from "@/components/layout/site-footer"
 import { auth } from "@/lib/firebase/client"
 import { onAuthStateChanged, User } from "firebase/auth"
 import { useRouter } from "next/navigation"

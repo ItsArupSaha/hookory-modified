@@ -1,4 +1,4 @@
-import { getWelcomeEmailTemplate, getFeedbackReceivedEmailTemplate } from "@/lib/email-templates"
+import { getWelcomeEmailTemplate, getFeedbackReceivedEmailTemplate } from "@/lib/emails/templates"
 import { sendEmail } from "@/lib/email"
 import { adminDb } from "@/lib/firebase/admin"
 import { getUserFromRequest } from "@/lib/auth-server"

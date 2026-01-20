@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
-import { FeedbackDialog } from "@/components/feedback-dialog"
-import { ReviewDialog } from "@/components/review-dialog"
+import { FeedbackDialog } from "@/components/features/feedback-dialog"
+import { ReviewDialog } from "@/components/features/review-dialog"
 import { auth, db } from "@/lib/firebase/client"
 import { clearLocalStoragePaymentStatus, cn, getLocalStoragePaymentStatus, setLocalStoragePaymentStatus } from "@/lib/utils"
 import { onAuthStateChanged, signOut, User } from "firebase/auth"

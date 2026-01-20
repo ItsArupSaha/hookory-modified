@@ -1,4 +1,4 @@
-import { PageTransition } from "@/components/page-transition"
+import { PageTransition } from "@/components/layout/page-transition"
 import { Toaster } from "@/components/ui/toaster"
 import type { Metadata } from "next"
 import { Ubuntu } from "next/font/google"

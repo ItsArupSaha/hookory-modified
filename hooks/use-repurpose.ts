@@ -1,4 +1,4 @@
-import { useAppShell } from "@/components/app-shell"
+import { useAppShell } from "@/components/layout/app-shell"
 import { toast } from "@/components/ui/use-toast"
 import { auth } from "@/lib/firebase/client"
 import { User } from "firebase/auth"

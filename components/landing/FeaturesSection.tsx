@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BLOG_TEXT, GENERATED_POSTS } from "@/lib/landing-examples"
+import { BLOG_TEXT, GENERATED_POSTS } from "@/lib/data/landing-examples"
 
 export function FeaturesSection() {
     return (

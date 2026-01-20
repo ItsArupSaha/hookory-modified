@@ -1,4 +1,4 @@
-import SiteFooter from "@/components/site-footer"
+import SiteFooter from "@/components/layout/site-footer"
 import Link from "next/link"
 
 export default function TermsPage() {
