@@ -9,7 +9,7 @@ Hookline.io turns one piece of content into multiple ready-to-post LinkedIn form
 - **Auth**: Firebase Authentication (Google + email/password)
 - **Database**: Firestore (users, jobs, cache)
 - **Billing**: Stripe subscriptions + webhook
-- **AI**: Google Gemini (default) via `@google/generative-ai`, OpenAI stub
+- **AI**: OpenAI GPT-4o-mini via `openai`
 - **Hosting target**: Vercel
 
 ## Features Overview
@@ -84,9 +84,7 @@ Configure a recurring product in Stripe and copy the price ID.
 
 ### AI Provider
 
-- `AI_PROVIDER=gemini` (default; can be `openai` later).
-- `GEMINI_API_KEY` – from Google AI Studio.
-- `OPENAI_API_KEY` – optional, for switching to OpenAI.
+- `OPENAI_API_KEY` – from OpenAI Platform.
 
 ## Data Model (Firestore)
 
@@ -262,7 +260,7 @@ Paste the webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
 
 ## Notes & Extensibility
 
-- AI provider can be switched from Gemini to OpenAI by changing `AI_PROVIDER` and providing `OPENAI_API_KEY`.
+- AI provider is OpenAI GPT-4o-mini.
 - History UI can be extended with regenerate buttons that call `/api/generate` with `regenerate: true`.
 - Soft-delete currently:
   - Clears Stripe metadata.

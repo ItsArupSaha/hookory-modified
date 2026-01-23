@@ -3,7 +3,7 @@ import { z } from "zod"
 export const GenerateBodySchema = z.object({
     inputType: z.enum(["text", "url"]),
     inputText: z.string().optional(),
-    url: z.string().url().optional(),
+    url: z.union([z.string().url(), z.literal("")]).optional(),
     context: z.object({
         targetAudience: z.string().optional(),
         goal: z.enum(["engagement", "leads", "authority"]).optional(),

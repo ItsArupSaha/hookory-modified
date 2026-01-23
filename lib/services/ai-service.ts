@@ -53,7 +53,7 @@ export class AiService {
             await setCachedOutput(
                 cacheKey,
                 output,
-                "gemini"
+                "openai"
             )
         }
 
