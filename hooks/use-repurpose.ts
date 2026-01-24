@@ -4,7 +4,7 @@ import { auth } from "@/lib/firebase/client"
 import { User } from "firebase/auth"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { FormatKey, GoalType, StyleType, ToneType } from "@/components/dashboard/types"
+import { FormatKey, ToneType } from "@/components/dashboard/types"
 
 export function useRepurpose() {
     const { refreshUserData } = useAppShell()
@@ -13,15 +13,14 @@ export function useRepurpose() {
     const [tab, setTab] = useState<"text" | "url">("text")
     const [inputText, setInputText] = useState("")
     const [url, setUrl] = useState("")
-    const [targetAudience, setTargetAudience] = useState("")
-    const [goal, setGoal] = useState<GoalType>("engagement")
-    const [style, setStyle] = useState<StyleType>("thought-leader")
+    const [readerContext, setReaderContext] = useState("")
+    const [angle, setAngle] = useState("")
     const [emojiOn, setEmojiOn] = useState(false)
     const [tonePreset, setTonePreset] = useState<ToneType>("professional")
     const [formats, setFormats] = useState<Record<FormatKey, boolean>>({
-        "thought-leadership": true,
+        "main-post": true,
         "story-based": false,
-        "educational-carousel": false,
+        "carousel": false,
         "short-viral-hook": false,
     })
 
@@ -31,9 +30,9 @@ export function useRepurpose() {
     const [loading, setLoading] = useState(false)
     const [cooldown, setCooldown] = useState(0)
     const [results, setResults] = useState<Record<FormatKey, string>>({
-        "thought-leadership": "",
+        "main-post": "",
         "story-based": "",
-        "educational-carousel": "",
+        "carousel": "",
         "short-viral-hook": "",
     })
     const [plan, setPlan] = useState<"free" | "creator" | null>(null)
@@ -42,9 +41,9 @@ export function useRepurpose() {
 
     // Store parsed hooks separately
     const [responseHooks, setResponseHooks] = useState<Record<FormatKey, string[]>>({
-        "thought-leadership": [],
+        "main-post": [],
         "story-based": [],
-        "educational-carousel": [],
+        "carousel": [],
         "short-viral-hook": [],
     })
 
@@ -125,9 +124,8 @@ export function useRepurpose() {
                     inputText,
                     url,
                     context: {
-                        targetAudience: targetAudience.trim() || undefined,
-                        goal: (goal || undefined) as any,
-                        style: (style || undefined) as any,
+                        readerContext: readerContext.trim() || undefined,
+                        angle: (angle || undefined),
                         emojiOn,
                         tonePreset: (tonePreset || undefined) as any,
                     },
@@ -251,9 +249,8 @@ export function useRepurpose() {
                     inputText,
                     url,
                     context: {
-                        targetAudience: targetAudience.trim() || undefined,
-                        goal: (goal || undefined) as any,
-                        style: (style || undefined) as any,
+                        readerContext: readerContext.trim() || undefined,
+                        angle: (angle || undefined),
                         emojiOn,
                         tonePreset: (tonePreset || undefined) as any,
                     },
@@ -368,9 +365,9 @@ export function useRepurpose() {
         setFormats((prev) => {
             const willSelect = !prev[key]
             const base: Record<FormatKey, boolean> = {
-                "thought-leadership": false,
+                "main-post": false,
                 "story-based": false,
-                "educational-carousel": false,
+                "carousel": false,
                 "short-viral-hook": false,
             }
             if (willSelect) {
@@ -420,12 +417,10 @@ export function useRepurpose() {
         setInputText,
         url,
         setUrl,
-        targetAudience,
-        setTargetAudience,
-        goal,
-        setGoal,
-        style,
-        setStyle,
+        readerContext,
+        setReaderContext,
+        angle,
+        setAngle,
         emojiOn,
         setEmojiOn,
         tonePreset,

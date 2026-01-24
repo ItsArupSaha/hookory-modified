@@ -54,9 +54,9 @@ export function ResultsSection({
             ) : (
                 selectedFormats.map((key) => {
                     const titleMap: Record<FormatKey, string> = {
-                        "thought-leadership": "Main LinkedIn post",
+                        "main-post": "Main LinkedIn post",
                         "story-based": "Story-style post",
-                        "educational-carousel": "Educational / carousel text",
+                        "carousel": "Carousel text",
                         "short-viral-hook": "Short hook post",
                     }
                     const value = results[key] || ""

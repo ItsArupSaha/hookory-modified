@@ -9,23 +9,35 @@ export class AiService {
         formats: string[],
         regenerate: boolean
     ) {
-        // Default targetAudience if empty
-        const targetAudience = context?.targetAudience?.trim() || "General LinkedIn users"
-        const emojiOn = !!context?.emojiOn
-        // Default to professional tone if not provided
+        /**
+         * 1. Prepare Defaults
+         * We ensure essential fields like tone have a fallback.
+         */
         const tonePreset = context?.tonePreset || "professional"
+        const emojiOn = !!context?.emojiOn // Restored missing variable
 
-        // Create resolved context with defaults for AI
+        /**
+         * 2. Build Resolved Context
+         * This object aligns with the GenerateContext interface required by the AI engine.
+         * It strips away any legacy fields and focuses on the 4 core drivers (Reader, Angle, Tone, Emoji).
+         */
         const resolvedContext = {
             ...context,
-            targetAudience,
             tonePreset,
+            readerContext: context?.readerContext,
+            angle: context?.angle,
+            emojiOn // Explicitly pass it
         }
 
         const outputs: Record<string, string> = {}
         const fromCache: Record<string, boolean> = {}
 
+        /**
+         * 3. Process Each Format
+         * We iterate through requested formats (e.g., 'main-post', 'carousel') and generate/fetch content.
+         */
         for (const format of formats) {
+            // Compute unique cache key based on inputs + logic parameters
             const cacheKey = computeCacheKey(
                 input,
                 resolvedContext,
@@ -36,6 +48,7 @@ export class AiService {
 
             let output = null
             if (!regenerate) {
+                // Try to fetch from cache first to save costs/time
                 output = await getCachedOutput(cacheKey)
             }
 
@@ -45,11 +58,15 @@ export class AiService {
                 continue
             }
 
-            // Generate new content
+            /**
+             * 4. Generate Content (Cache Miss)
+             * Call the AI engine with the resolved context.
+             */
             output = await generateLinkedInFormat(format as LinkedInFormat, input, resolvedContext, regenerate)
             outputs[format] = output
             fromCache[format] = false
 
+            // Cache the result for future identical requests
             await setCachedOutput(
                 cacheKey,
                 output,

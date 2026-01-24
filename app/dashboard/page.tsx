@@ -15,12 +15,10 @@ export default function NewRepurposePage() {
         setInputText,
         url,
         setUrl,
-        targetAudience,
-        setTargetAudience,
-        goal,
-        setGoal,
-        style,
-        setStyle,
+        readerContext,
+        setReaderContext,
+        angle,
+        setAngle,
         emojiOn,
         setEmojiOn,
         tonePreset,
@@ -65,12 +63,10 @@ export default function NewRepurposePage() {
                     setInputText={setInputText}
                     url={url}
                     setUrl={setUrl}
-                    targetAudience={targetAudience}
-                    setTargetAudience={setTargetAudience}
-                    goal={goal}
-                    setGoal={setGoal}
-                    style={style}
-                    setStyle={setStyle}
+                    readerContext={readerContext}
+                    setReaderContext={setReaderContext}
+                    angle={angle}
+                    setAngle={setAngle}
                     emojiOn={emojiOn}
                     setEmojiOn={setEmojiOn}
                     tonePreset={tonePreset}

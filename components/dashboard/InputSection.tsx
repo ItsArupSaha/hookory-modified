@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { FormatKey, GoalType, StyleType, ToneType, MAX_INPUT_LENGTH_CREATOR, MAX_INPUT_LENGTH_FREE } from "./types"
+import { useState, useEffect } from "react"
+import { FormatKey, ToneType, MAX_INPUT_LENGTH_CREATOR, MAX_INPUT_LENGTH_FREE, READER_CONTEXT_OPTIONS, ANGLE_OPTIONS } from "./types"
 
 interface InputSectionProps {
     plan: "free" | "creator" | null
@@ -19,12 +20,10 @@ interface InputSectionProps {
     setInputText: (text: string) => void
     url: string
     setUrl: (url: string) => void
-    targetAudience: string
-    setTargetAudience: (audience: string) => void
-    goal: GoalType
-    setGoal: (goal: GoalType) => void
-    style: StyleType
-    setStyle: (style: StyleType) => void
+    readerContext: string
+    setReaderContext: (context: string) => void
+    angle: string
+    setAngle: (angle: string) => void
     emojiOn: boolean
     setEmojiOn: (on: boolean) => void
     tonePreset: ToneType
@@ -46,12 +45,10 @@ export function InputSection({
     setInputText,
     url,
     setUrl,
-    targetAudience,
-    setTargetAudience,
-    goal,
-    setGoal,
-    style,
-    setStyle,
+    readerContext,
+    setReaderContext,
+    angle,
+    setAngle,
     emojiOn,
     setEmojiOn,
     tonePreset,
@@ -65,6 +62,41 @@ export function InputSection({
     isLimitReached
 }: InputSectionProps) {
     const router = useRouter()
+
+    // Local state for "Custom" input visibility
+    const [isCustomReader, setIsCustomReader] = useState(false)
+    const [isCustomAngle, setIsCustomAngle] = useState(false)
+
+    // Sync custom state with external props on mount/update if needed
+    // If value is not in options and not empty, it's custom.
+    useEffect(() => {
+        if (readerContext && !READER_CONTEXT_OPTIONS.includes(readerContext as any)) {
+            setIsCustomReader(true)
+        }
+        if (angle && !ANGLE_OPTIONS.includes(angle as any)) {
+            setIsCustomAngle(true)
+        }
+    }, []) // Run once on mount to set initial state
+
+    const handleReaderSelect = (val: string) => {
+        if (val === "custom") {
+            setIsCustomReader(true)
+            setReaderContext("") // Clear for new input
+        } else {
+            setIsCustomReader(false)
+            setReaderContext(val)
+        }
+    }
+
+    const handleAngleSelect = (val: string) => {
+        if (val === "custom") {
+            setIsCustomAngle(true)
+            setAngle("") // Clear for new input
+        } else {
+            setIsCustomAngle(false)
+            setAngle(val)
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -177,7 +209,7 @@ export function InputSection({
                 </CardContent>
             </Card>
 
-            {/* Context card */}
+            {/* Context card - SIMPLIFIED */}
             <Card className="border-stone-200 bg-white/70 backdrop-blur-xl shadow-sm rounded-[2rem] overflow-hidden hover:shadow-md transition-all">
                 <CardHeader className="border-b border-stone-100/50 pb-4">
                     <CardTitle className="text-base font-bold text-stone-800 flex items-center gap-2">
@@ -185,96 +217,138 @@ export function InputSection({
                         Context
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-5 sm:grid-cols-2 pt-6">
-                    <div className="space-y-2 sm:col-span-2">
-                        <Label
-                            htmlFor="targetAudience"
-                            className="text-xs font-semibold text-stone-600 ml-1"
-                        >
-                            Who is this post for?
+                <CardContent className="grid gap-6 pt-6">
+
+                    {/* Field 1: Reader Context */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-stone-600 ml-1">
+                            Who are you writing this for?
                         </Label>
-                        <Input
-                            id="targetAudience"
-                            value={targetAudience}
-                            onChange={(e) => setTargetAudience(e.target.value)}
-                            placeholder="e.g. Founders, HR leaders, Recruiters, Developers"
-                            className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full text-sm shadow-inner"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-stone-600 ml-1">What&apos;s your goal?</Label>
-                        <Select
-                            value={goal}
-                            onValueChange={(v) => setGoal(v as any)}
-                        >
-                            <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
-                                <SelectValue placeholder="What's your goal?" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
-                                <SelectItem value="engagement">Start conversations</SelectItem>
-                                <SelectItem value="authority">Build credibility</SelectItem>
-                                <SelectItem value="leads">Attract opportunities</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-stone-600 ml-1">Post style</Label>
-                        <Select
-                            value={style}
-                            onValueChange={(v) => setStyle(v as any)}
-                        >
-                            <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
-                                <SelectValue placeholder="Post style" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
-                                <SelectItem value="thought-leader">Opinion & insight</SelectItem>
-                                <SelectItem value="storyteller">Personal story</SelectItem>
-                                <SelectItem value="educator">Teach something</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-stone-600 ml-1">Emojis</Label>
-                        <div className="flex items-center gap-3 text-xs text-stone-600">
-                            <button
-                                type="button"
-                                onClick={() => setEmojiOn(!emojiOn)}
-                                className={`flex h-7 w-12 items-center rounded-full border px-1 transition-all duration-300 ${emojiOn
-                                    ? "border-emerald-500 bg-emerald-500 shadow-emerald-200 shadow-md"
-                                    : "border-stone-200 bg-stone-100"
-                                    }`}
+                        {!isCustomReader ? (
+                            <Select
+                                value={READER_CONTEXT_OPTIONS.includes(readerContext as any) ? readerContext : ""}
+                                onValueChange={handleReaderSelect}
                             >
-                                <span
-                                    className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${emojiOn ? "translate-x-5" : "translate-x-0"
-                                        }`}
+                                <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
+                                    <SelectValue placeholder="Select target audience..." />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                    {READER_CONTEXT_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="font-semibold text-emerald-600 focus:text-emerald-700">Type my own...</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <div className="flex gap-2">
+                                <Input
+                                    value={readerContext}
+                                    onChange={(e) => setReaderContext(e.target.value)}
+                                    placeholder="E.g. Real Estate Agents in NY..."
+                                    className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full text-sm shadow-inner"
+                                    autoFocus
                                 />
-                            </button>
-                            <span className="font-medium text-stone-500">{emojiOn ? "Enabled" : "Disabled"}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setIsCustomReader(false)
+                                        setReaderContext("")
+                                    }}
+                                    className="h-11 text-stone-400 hover:text-stone-600"
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Field 2: Angle */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-stone-600 ml-1">
+                            What should this post focus on?
+                        </Label>
+                        {!isCustomAngle ? (
+                            <Select
+                                value={ANGLE_OPTIONS.includes(angle as any) ? angle : ""}
+                                onValueChange={handleAngleSelect}
+                            >
+                                <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
+                                    <SelectValue placeholder="Select focus angle..." />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                    {ANGLE_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="font-semibold text-emerald-600 focus:text-emerald-700">Type my own...</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <div className="flex gap-2">
+                                <Input
+                                    value={angle}
+                                    onChange={(e) => setAngle(e.target.value)}
+                                    placeholder="E.g. A counter-intuitive discovery about..."
+                                    className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full text-sm shadow-inner"
+                                    autoFocus
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                        setIsCustomAngle(false)
+                                        setAngle("")
+                                    }}
+                                    className="h-11 text-stone-400 hover:text-stone-600"
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Field 3: Tone & Emojis */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-stone-600 ml-1">
+                                Writing tone
+                            </Label>
+                            <Select
+                                value={tonePreset}
+                                onValueChange={(v) => setTonePreset(v as any)}
+                            >
+                                <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
+                                    <SelectValue placeholder="Writing tone" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
+                                    <SelectItem value="professional">Professional</SelectItem>
+                                    <SelectItem value="conversational">Conversational</SelectItem>
+                                    <SelectItem value="bold">Bold</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-stone-600 ml-1">Emojis</Label>
+                            <div className="flex items-center gap-3 text-xs text-stone-600 h-11 px-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setEmojiOn(!emojiOn)}
+                                    className={`flex h-7 w-12 items-center rounded-full border px-1 transition-all duration-300 ${emojiOn
+                                        ? "border-emerald-500 bg-emerald-500 shadow-emerald-200 shadow-md"
+                                        : "border-stone-200 bg-stone-100"
+                                        }`}
+                                >
+                                    <span
+                                        className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${emojiOn ? "translate-x-5" : "translate-x-0"
+                                            }`}
+                                    />
+                                </button>
+                                <span className="font-medium text-stone-500">{emojiOn ? "Enabled" : "Disabled"}</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-stone-600 ml-1">
-                            Writing tone
-                        </Label>
-                        <Select
-                            value={tonePreset}
-                            onValueChange={(v) => setTonePreset(v as any)}
-                        >
-                            <SelectTrigger className="h-11 rounded-xl border-stone-200 bg-stone-50/50 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all hover:bg-stone-50">
-                                <SelectValue placeholder="Writing tone" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-stone-100 shadow-xl backdrop-blur-xl bg-white/90">
-                                <SelectItem value="professional">Professional</SelectItem>
-                                <SelectItem value="conversational">Friendly</SelectItem>
-                                <SelectItem value="storytelling">Story-driven</SelectItem>
-                                <SelectItem value="educational">Instructional</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </CardContent>
             </Card>
 
@@ -283,15 +357,15 @@ export function InputSection({
                 <CardHeader className="border-b border-stone-100/50 pb-4">
                     <CardTitle className="text-base font-bold text-stone-800 flex items-center gap-2">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-xs shadow-sm">3</div>
-                        What should we generate?
+                        What do you need right now?
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-3 sm:grid-cols-2 pt-6">
                     {(
                         [
-                            ["thought-leadership", "Main LinkedIn post"],
+                            ["main-post", "Main LinkedIn post"],
                             ["story-based", "Story-style post"],
-                            ["educational-carousel", "Educational / carousel text"],
+                            ["carousel", "Educational / carousel text"],
                             ["short-viral-hook", "Short hook post (scroll-stopping)"],
                         ] as [FormatKey, string][]
                     ).map(([key, label]) => (

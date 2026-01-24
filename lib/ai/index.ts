@@ -1,17 +1,30 @@
+// lib/ai/index.ts
+
 import OpenAI from "openai"
 
+/**
+ * Supported LinkedIn Output Formats.
+ * These map 1:1 with the defined format rules.
+ */
 export type LinkedInFormat =
-  | "thought-leadership"
+  | "main-post"
   | "story-based"
-  | "educational-carousel"
+  | "carousel"
   | "short-viral-hook"
 
+/**
+ * Context Interface.
+ * Defines the strict set of inputs the AI considers.
+ * - readerContext: Who is reading? (sets complexity/background)
+ * - angle: What is the focus? (sets the core insight)
+ * - emojiOn: Preference toggle
+ * - tonePreset: Stylistic direction
+ */
 export interface GenerateContext {
-  targetAudience?: string
-  goal?: "engagement" | "leads" | "authority"
-  style?: "thought-leader" | "storyteller" | "educator"
+  readerContext?: string
+  angle?: string
   emojiOn?: boolean
-  tonePreset?: "professional" | "conversational" | "storytelling" | "educational"
+  tonePreset?: "professional" | "conversational" | "bold"
 }
 
 export interface GenerateOptions {
@@ -21,18 +34,14 @@ export interface GenerateOptions {
   regenerate?: boolean
 }
 
-
-// Input length guard
-// Set to 20,000 to safely support Premium users (10k chars) + buffer
-// Enforce the specific 5k vs 10k limits in route.ts before calling this
+// Input constants
+// MAX_INPUT_CHARS protects the system from huge payloads.
 const MAX_INPUT_CHARS = 20000
 const MAX_OUTPUT_CHARS = 2900
 
 function normalizeInput(inputText: string): string {
   let normalized = inputText.trim()
-  // Replace multiple spaces/tabs with single space (but keep newlines)
   normalized = normalized.replace(/[ \t]+/g, " ")
-  // Ensure max 2 newlines (paragraph breaks)
   normalized = normalized.replace(/\n\s*\n/g, "\n\n")
   return normalized
 }
@@ -41,82 +50,80 @@ function validateInput(inputText: string): void {
   if (!inputText || inputText.trim().length === 0) {
     throw new Error("Input text cannot be empty")
   }
-
-  // Check for meaningful content (not just whitespace/special chars)
   const meaningfulContent = inputText.replace(/[\s\n\r\t]/g, "")
   if (meaningfulContent.length < 50) {
     throw new Error("Input text is too short. Please provide more content to repurpose.")
   }
-
   if (inputText.length > MAX_INPUT_CHARS) {
     throw new Error(`Input text exceeds maximum length of ${MAX_INPUT_CHARS} characters`)
   }
 }
 
+/**
+ * Generates the System Prompt for the AI.
+ * This prompt defines the persona and the core style guide.
+ *
+ * PROMPT STRATEGY:
+ * We use a "Style Guide" approach (Positive Constraints) rather than
+ * "Negative Constraints" (e.g., "Don't do X").
+ * This guides the model effectively even with smaller models like gpt-4o-mini.
+ */
 function getSystemPrompt(): string {
-  return `### SYSTEM ROLE
-You write LinkedIn posts the way experienced professionals do: concise, opinionated, and human. 
-You avoid sounding instructional or academic. You prioritize flow and credibility over completeness.
-You understand the importance of whitespace and how to hook a reader in the first 2 lines.
+  return `You are a skilled LinkedIn Ghostwriter.
+You are an expert and professional linkedin ghostwriter who repurposes content into authentic, high-engagement LinkedIn posts.
 
-### NEGATIVE CONSTRAINTS
-- Do NOT use generic AI intro phrases like "In today's landscape," "Unlock the potential," "Delve into," "Game-changer," "Tapestry," "Leverage," "Harness," "Unveil," "Navigate," "Embark on a journey," "In the realm of," "Master the art of," "Transform your," "Elevate your," "Unlock the power of," "Dive deep," "Let's explore," "Revolutionary," or "In today's fast-paced world."
-- Do NOT use hashtags in the middle of sentences.
-- Never mention the target audience name or group in the post directly. Write *for* them, not *at* them.
-- Do NOT summarize the whole blog; focus only on the core value proposition.
-- Do NOT use markdown bolding (like **text**) because LinkedIn does not support it. Use "quotes" for emphasis instead.`
+STYLE GUIDE:
+1. Human Tone: Vary sentence length. Short for impact, long for nuance.
+2. Directness: Active voice only. No fluff words ("crucial", "landscape", "uncover").
+3. Audience: Address "you" directly. Never say "everyone" or "folks".
+4. Concrete: Use specific examples/metaphors, not abstract concepts.
+5. Ending: Provoke discussion with a specific question. No lazy "thoughts?".
+6. Hashtags: Add 3-5 relevant and top-trending hashtags at the end.`
 }
 
+/**
+ * logical mapping of formats to their specific structural rules.
+ */
 function getFormatRules(format: LinkedInFormat): string {
   const rules: Record<LinkedInFormat, string> = {
-    "thought-leadership": `
-BODY STRUCTURE:
-- Develop ONE strong idea or insight
-- Support with reasoning, experience, or evidence
-- Use 6–10 short lines total
-- End with a reflective question or discussion CTA
-TARGET LENGTH: 800–1200 characters
-TONE: Confident, insightful, non-salesy
+    "main-post": `
+OUTPUT TYPE: MAIN POST
+- Length: 800-1200 characters
+- Structure:
+  - Strong hook (1-2 lines)
+  - Clear insight or argument
+  - Short supporting points
+  - Reflective ending
+- Style: Insightful, confident, clean.
 `,
-
     "story-based": `
-BODY STRUCTURE:
-- Describe the struggle or failure briefly
-- Show the turning point (decision, realization, change)
-- Explain the outcome or transformation
-- End with a clear lesson or takeaway
-STYLE:
-- Human, vulnerable, first-person
-- No motivational fluff
-TARGET LENGTH: 1000–1500 characters
+OUTPUT TYPE: STORY POST
+- Length: 1000-1500 characters
+- Structure:
+  - The struggle/moment of failure (brief)
+  - The realization (pivot)
+  - The outcome or lesson
+- Style: Vulnerable, first-person ("I"), narrative.
 `,
-
-    "educational-carousel": `
-BODY STRUCTURE (SLIDE-BASED):
-- Slide 1: Big cover title only
-- Slides 2–5:
-  - ONE concrete tip per slide
-  - Bold headline + max 1 short sentence OR 2 bullets
-  - Max 30 words per slide
-- Final slide: Summary + CTA
-IMPORTANT:
-- Write as if each slide is read independently
-TARGET LENGTH: 1200–1800 characters
+    "carousel": `
+OUTPUT TYPE: CAROUSEL TEXT (SLIDES)
+- Length: 1200-1800 characters
+- Structure:
+  - Slide 1: Title only
+  - Slides 2-5: One clear tip/idea per slide (max 30 words)
+  - Final Slide: Summary
+- Style: Punchy, educational, slide-by-slide.
 `,
-
     "short-viral-hook": `
-BODY STRUCTURE:
-- Expand on ONE core insight only
-- Use punchy, broken lines
-- Optional bullets (max 3)
-- End with a sharp CTA
-STYLE:
-- Fast-paced, minimalist
-- No explanations, only implications
-TARGET LENGTH: 400–800 characters
+OUTPUT TYPE: SHORT VIRAL POST
+- Length: 400-800 characters
+- Structure:
+  - Single sharp insight
+  - Broken lines for readability
+  - Fast pacing
+- Style: Minimalist, provocative.
 `
   }
-
   return rules[format]
 }
 
@@ -125,80 +132,55 @@ function getInstructionPrompt(
   context: GenerateContext,
   regenerate: boolean
 ): string {
-  const { targetAudience, goal, style, emojiOn, tonePreset } = context
+  const { readerContext, angle, emojiOn, tonePreset } = context
 
-  // Map internal values to readable strings for the prompt
-  const goalText =
-    goal === "leads"
-      ? "Get leads/sales"
-      : goal === "authority"
-        ? "Build Authority"
-        : "Get viral engagement"
-
-  const toneText = tonePreset || "Professional yet conversational"
-  const audienceText = targetAudience || "General Professionals"
-
-  const formatSpecificRules = getFormatRules(format)
+  const emojiInstruction = emojiOn ? "ON (Use 1-5 naturally)" : "OFF (None)"
 
   const regenerationInstruction = regenerate
-    ? "CRITICAL: This is a retry. The previous output was rejected. You MUST write a completely different hook and angle. Choose a different mental angle or framing of the same idea. Do not simply paraphrase; shift the perspective."
+    ? "RETRY INSTRUCTION: The user rejected the previous output. \n1. Do NOT just paraphrase. \n2. Write a completely NEW hook (if you asked a question, make a statement). \n3. Make the tone 20% sharper/bolder."
     : ""
 
-  const emojiInstruction = emojiOn
-    ? "Use 1-3 relevant emojis strategically placed in a moderate and professional way. Emojis should enhance the message, not distract from it. Place them naturally within the content where they add value."
-    : "Do not use emojis."
+  const formatRules = getFormatRules(format)
 
-  return `### INPUT DATA
-**Target Audience:** ${audienceText}
-**Primary Goal:** ${goalText}
-**Post Style:** ${style || "Engaging"}
-**Tone:** ${toneText}
-**Output Format:** ${format.replace(/-/g, " ")}
-**Emojis:** ${emojiInstruction}
+  // "Internal Thinking" process to prevent generic summaries.
+  // We ask the model to silently analyze before writing.
+  const processInstructions = `PROCESS:
+First, silently identify the strongest "Hook" and single "Core Insight".
+Then, write the post based strictly on that angle. 
+IMPORTANT: Output ONLY the final post. Do not reveal your analysis.`
+
+  return `CONTEXT:
+- Reader context: ${readerContext || "General LinkedIn readers"}
+- Angle: ${angle || "Auto-detect best angle"}
+- Tone: ${tonePreset || "Professional"}
+- Emojis: ${emojiInstruction}
 
 ${regenerationInstruction}
 
-### INSTRUCTIONS
-Your task is to repurpose the SOURCE CONTENT provided by the user into a LinkedIn post based strictly on the INPUT DATA above.
+${processInstructions}
 
-Follow these execution steps:
-1. **Analyze:** Read the source content and identify the single most valuable insight that aligns with the Audience's pain points.
-2. **The Hook:** Write a "scroll-stopping" first line. It must be punchy, under 15 words, and create immediate curiosity.
-3. **Drafting:** Write the post body.
-   - Use short, punchy sentences.
-   - Use line breaks between almost every sentence (mobile optimization).
-   - Remove fluff. If a sentence doesn't add value, delete it.
-4. **Formatting:** Apply the specific rules below:
-${formatSpecificRules}
-5. **Call to Action (CTA):** End with a specific question or instruction that drives the Goal.
+${formatRules}
 
-### FORMATTING RULES (STRICT)
-- CRITICAL: LinkedIn does NOT support markdown formatting. Do NOT use asterisks (*) for bold, underscores (_) for italic, or any markdown symbols. These will appear as literal characters and look unprofessional.
-- You CAN use lists (numbered or bulleted with plain text), double quotes, and line breaks - these are all plain text formatting that works on LinkedIn.
-- Hashtags (if used): Maximum 3 hashtags at the end. Choose hashtags based ONLY on the actual content topics and themes, NOT based on the selected options (goal, style, format). Use the most popular and relevant hashtags that match the content's core topics.
-- Character limit: Maximum ${MAX_OUTPUT_CHARS} characters (including spaces and newlines). Keep it under this limit.
+Formatting Constraints:
+- NO markdown bold/italic (LinkedIn doesn't support it). Use "quotes" for emphasis.
+- DO NOT start with a greeting like "Hey [Audience Name]". Start directly with the hook.
+- Max 3 hashtags at the end (contexual, not generic).
+- Use line breaks for readability.
+- Total character limit: Under ${MAX_OUTPUT_CHARS} chars.
 
-### BONUS OUTPUT (MANDATORY)
-After the main post, you MUST output a separator line exactly like this: "---EXTRA_HOOKS---" (ensure it is on a new line).
-Then, list exactly 5 alternative hooks for this post.
-- Format:
-1. Contrarian Hook: [Hook text]
-2. Problem-first Hook: [Hook text]
-3. Authority Hook: [Hook text]
-4. Curiosity Hook: [Hook text]
-5. Direct promise Hook: [Hook text]
-- Content: Just the opening hook (first 1-2 lines), not the full post.
-- Variation: Ensure they strictly follow the categories labeled above.
-
-### FINAL OUTPUT
-Generate the LinkedIn post text, followed by the "---EXTRA_HOOKS---" separator and the numbered list of 5 labeled hooks.`
+BONUS OUTPUT (Mandatory):
+After the post, add a separator "---EXTRA_HOOKS---" and list exactly 5 alternative hooks:
+1. Contrarian Hook: [Content]
+2. Problem-first Hook: [Content]
+3. Authority Hook: [Content]
+4. Curiosity Hook: [Content]
+5. Direct promise Hook: [Content]
+(Just the first 2 lines for each hook).`
 }
 
 function getUserPrompt(inputText: string): string {
-  // Input is already normalized before this function is called
-  // Prevent user from breaking out of the content block by escaping triple quotes
   const safeInput = inputText.replace(/"""/g, "'''")
-  return `### SOURCE CONTENT
+  return `SOURCE CONTENT:
 """
 ${safeInput}
 """`
@@ -206,67 +188,46 @@ ${safeInput}
 
 async function generateWithOpenAI(options: GenerateOptions): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not set")
-  }
+  if (!apiKey) throw new Error("OPENAI_API_KEY not set")
 
   validateInput(options.inputText)
 
-  const openai = new OpenAI({
-    apiKey: apiKey,
-  })
-
-  const instructionPrompt = getInstructionPrompt(
-    options.format,
-    options.context,
-    options.regenerate || false
-  )
-  const userPrompt = getUserPrompt(options.inputText)
-
-  // OpenAI Chat Completion
+  const openai = new OpenAI({ apiKey })
   const systemPrompt = getSystemPrompt()
-  const fullUserContent = `${instructionPrompt}\n\n${userPrompt}`
+  const instructionPrompt = getInstructionPrompt(options.format, options.context, options.regenerate || false)
+  const userPrompt = getUserPrompt(options.inputText)
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Using gpt-4o-mini as requested
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: fullUserContent },
+        { role: "user", content: `${instructionPrompt}\n\n${userPrompt}` }
       ],
-      temperature: 0.7, // Creative but controlled
-      max_tokens: 2000, // Plenty of room for ~2900 chars
+      temperature: 0.7,
+      max_tokens: 2000,
     })
 
     const text = response.choices[0].message.content
-
-    if (!text || text.trim().length === 0) {
-      throw new Error("Empty response from AI")
-    }
-
-    // Return FULL content - never trim or cut off
+    if (!text) throw new Error("Empty response from AI")
     return text.trim()
   } catch (error: any) {
     console.error("OpenAI generation error:", error)
-    // User-friendly error mapping
-    if (error.status === 429) {
-      throw new Error("AI service is busy (Rate Limit). Please try again in a moment.")
-    }
-    if (error.status === 400) {
-      throw new Error("The content could not be processed. Please check your input.")
-    }
-    if (error.code === 'context_length_exceeded') {
-      throw new Error("Input is too long for the model to process.")
-    }
-    // Network errors or others
-    if (error.message?.includes("timeout") || error.message?.includes("ETIMEDOUT")) {
-      throw new Error("Request timed out. Please try again.")
-    }
-
-    throw new Error("AI generation failed. Please try again.")
+    if (error.status === 429) throw new Error("AI service busy. Try again shortly.")
+    if (error.status === 400) throw new Error("Content could not be processed.")
+    throw new Error("AI generation failed.")
   }
 }
 
+/**
+ * Main entry point for generating LinkedIn content.
+ * Handles normalization, validation, and race-conditions (timeouts).
+ *
+ * @param format - The target LinkedIn post format
+ * @param inputText - The raw source text
+ * @param context - Configuration for tone, audience, etc.
+ * @param regenerate - Whether this is a retry (triggers stricter prompts)
+ */
 export async function generateLinkedInFormat(
   format: LinkedInFormat,
   inputText: string,
@@ -274,38 +235,17 @@ export async function generateLinkedInFormat(
   regenerate?: boolean
 ): Promise<string> {
   const normalized = normalizeInput(inputText)
-
-  // We check length here to protect the Engine.
-  // NOTE: Your route.ts MUST check the 5k/10k limit before calling this!
   if (normalized.length > MAX_INPUT_CHARS) {
-    throw new Error(`Input text is too long (${normalized.length} chars). Max allowed is ${MAX_INPUT_CHARS}.`)
+    throw new Error(`Input too long (${normalized.length} chars).`)
   }
 
-  validateInput(normalized)
-
-  const options: GenerateOptions = {
-    format,
-    inputText: normalized, // Don't truncate - route.ts handles limits
-    context,
-    regenerate,
-  }
-
-  // Timeout wrapper
+  // Timeout wrapper (60s)
   const timeoutPromise = new Promise<string>((_, reject) => {
-    setTimeout(() => reject(new Error("AI generation timeout")), 60000) // 60s timeout
+    setTimeout(() => reject(new Error("AI generation timeout")), 60000)
   })
 
-  // Use the new OpenAI generator
-  const generationPromise = generateWithOpenAI(options)
-
-  try {
-    return await Promise.race([generationPromise, timeoutPromise])
-  } catch (error: any) {
-    // Wrap timeout errors in user-safe messages
-    if (error.message?.includes("timeout")) {
-      throw new Error("Request timed out. Please try again.")
-    }
-    // Re-throw other errors (they're already user-safe from the generator functions)
-    throw error
-  }
+  return Promise.race([
+    generateWithOpenAI({ format, inputText: normalized, context, regenerate }),
+    timeoutPromise
+  ])
 }
