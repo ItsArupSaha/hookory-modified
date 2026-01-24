@@ -2,8 +2,8 @@ import { checkAndResetUsage, checkCooldown, incrementUsage } from "@/lib/usage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { Timestamp } from "firebase-admin/firestore"
 
-export const MAX_INPUT_LENGTH_FREE = 5000
-export const MAX_INPUT_LENGTH_CREATOR = 10000
+export const MAX_INPUT_LENGTH_FREE = 8000
+export const MAX_INPUT_LENGTH_CREATOR = 15000
 
 export class UserService {
     static async checkRateLimit(ip: string) {

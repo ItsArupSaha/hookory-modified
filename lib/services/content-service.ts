@@ -14,6 +14,9 @@ export class ContentService {
             }
             try {
                 finalInputText = await extractTextFromUrl(url)
+                if (finalInputText.length > maxInputLength) {
+                    finalInputText = finalInputText.slice(0, maxInputLength)
+                }
             } catch (extractError: any) {
                 console.error("URL extraction failed:", extractError)
                 throw new Error(extractError.message || "Failed to extract content from URL. Please try copying the content directly.")

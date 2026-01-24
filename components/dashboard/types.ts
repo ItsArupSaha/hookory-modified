@@ -4,8 +4,8 @@ export type FormatKey =
     | "educational-carousel"
     | "short-viral-hook"
 
-export const MAX_INPUT_LENGTH_FREE = 5000
-export const MAX_INPUT_LENGTH_CREATOR = 10000
+export const MAX_INPUT_LENGTH_FREE = 8000
+export const MAX_INPUT_LENGTH_CREATOR = 15000
 
 export type GoalType = "engagement" | "leads" | "authority" | ""
 export type StyleType = "thought-leader" | "storyteller" | "educator" | ""
