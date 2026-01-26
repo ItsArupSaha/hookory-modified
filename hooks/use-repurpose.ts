@@ -204,12 +204,9 @@ export function useRepurpose() {
                     const hooks = hookSection
                         .split("\n")
                         .map(line => line.trim())
-                        // Allow digits (1.), bullets (*, -), or just text if it looks like a hook
-                        .filter(line => line.length > 5 && (
-                            /^\d+\./.test(line) ||
-                            /^[-*]/.test(line) ||
-                            line.toLowerCase().includes("hook:")
-                        ))
+                        // Relaxed filter: In the "Extra Hooks" section, basically any line with content is a hook.
+                        // We still filter out short noise or headers if any remain.
+                        .filter(line => line.length > 10)
                         .map(line => {
                             // Clean up leading numbers/bullets and quotes
                             return line

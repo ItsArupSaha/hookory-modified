@@ -1,5 +1,3 @@
-// lib/ai/index.ts
-
 import OpenAI from "openai"
 
 /**
@@ -35,7 +33,6 @@ export interface GenerateOptions {
 }
 
 // Input constants
-// MAX_INPUT_CHARS protects the system from huge payloads.
 const MAX_INPUT_CHARS = 20000
 const MAX_OUTPUT_CHARS = 2900
 
@@ -60,68 +57,77 @@ function validateInput(inputText: string): void {
 }
 
 /**
- * Generates the System Prompt for the AI.
- * This prompt defines the persona and the core style guide.
- *
- * PROMPT STRATEGY:
- * We use a "Style Guide" approach (Positive Constraints) rather than
- * "Negative Constraints" (e.g., "Don't do X").
- * This guides the model effectively even with smaller models like gpt-4o-mini.
+ * System Prompt: opinionated, minimal, high-leverage for gpt-4o-mini.
+ * Key upgrades:
+ * - Forces source-anchored writing (prevents generic "leadership wisdom").
+ * - Prevents invented personal stories when source is technical.
+ * - Enforces "one failure pattern" (angle) without repeating a template phrase.
  */
 function getSystemPrompt(): string {
-  return `You are a skilled LinkedIn Ghostwriter.
-You are an expert and professional linkedin ghostwriter who repurposes content into authentic, high-engagement LinkedIn posts.
+  return `You are Hookory, a LinkedIn editor and ghostwriter.
+You repurpose provided source content into one LinkedIn post that feels human, specific, and worth reading.
 
-STYLE GUIDE:
-1. Human Tone: Vary sentence length. Short for impact, long for nuance.
-2. Directness: Active voice only. No fluff words ("crucial", "landscape", "uncover").
-3. Audience: Address "you" directly. Never say "everyone" or "folks".
-4. Concrete: Use specific examples/metaphors, not abstract concepts.
-5. Ending: Provoke discussion with a specific question. No lazy "thoughts?".
-6. Hashtags: Add 3-5 relevant and top-trending hashtags at the end.`
+NON-NEGOTIABLES:
+- Stay grounded in the SOURCE. Use at least 2 concrete details from it (tools, steps, numbers, terms, constraints).
+- Do not invent facts. If the source is technical/instructional, do NOT fabricate a personal launch story or fake "my project" narrative.
+- Pick ONE central angle and keep every paragraph aligned to it (no multi-topic summaries).
+- Write for how LinkedIn is read: short lines, clear beats, zero filler.
+- Emojis are acceptable when explicitly requested by context and should be treated as part of tone, not decoration.
+- Reading level: simple, direct, grade 6–8. Prefer short common words.
+- Avoid generic moralizing (e.g., "human side", "connection", "crucial", "unlock", "game-changer") unless the source explicitly supports it.
+
+HOOK QUALITY:
+- The first 2 lines must create tension using a concrete element from the source (not generic life advice).
+- A great hook makes the reader feel: "Wait—how can that be true?"
+
+ENDING:
+- End with a specific, high-signal question that fits the angle and audience (no "thoughts?").
+- 3–5 relevant hashtags max, only if truly relevant to the source.`
 }
 
 /**
- * logical mapping of formats to their specific structural rules.
+ * Format rules (BODY behavior only). Hooks are enforced globally in system/process.
  */
 function getFormatRules(format: LinkedInFormat): string {
   const rules: Record<LinkedInFormat, string> = {
     "main-post": `
 OUTPUT TYPE: MAIN POST
-- Length: 800-1200 characters
-- Structure:
-  - Strong hook (1-2 lines)
-  - Clear insight or argument
-  - Short supporting points
-  - Reflective ending
-- Style: Insightful, confident, clean.
+Target length: 900–1600 characters.
+Body shape:
+- After the hook, state the core point fast (1–2 short lines).
+- Add 2–4 tight supporting lines (evidence/steps/contrast), grounded in the source.
+- End with a specific question tied to the core point.
 `,
     "story-based": `
-OUTPUT TYPE: STORY POST
-- Length: 1000-1500 characters
-- Structure:
-  - The struggle/moment of failure (brief)
-  - The realization (pivot)
-  - The outcome or lesson
-- Style: Vulnerable, first-person ("I"), narrative.
+OUTPUT TYPE: STORY-STYLE POST
+Target length: 1100–1900 characters.
+Body shape:
+- Open with a concrete failure / contradiction / surprise from the source.
+- Build tension: what people assume vs what happens.
+- Turning point: the key insight (still grounded in the source).
+- Outcome: what changes when you apply it (keep realistic, no fake metrics).
+- End with a sharp decision question.
+Important:
+- If the source is not personal, write as: "I used to assume..." only if it can be reasonably inferred.
+  Otherwise write as an observer: "Here's the trap…" / "Most teams do X…"
 `,
     "carousel": `
 OUTPUT TYPE: CAROUSEL TEXT (SLIDES)
-- Length: 1200-1800 characters
-- Structure:
-  - Slide 1: Title only
-  - Slides 2-5: One clear tip/idea per slide (max 30 words)
-  - Final Slide: Summary
-- Style: Punchy, educational, slide-by-slide.
+Target length: 1200–2200 characters.
+Rules:
+- Write as SLIDES with clear separators (e.g., "Slide 1:", "Slide 2:", etc.)
+- Slide 1: big cover title only (6–10 words).
+- Slides 2–5: ONE concrete point each. Max 30 words per slide.
+- Final slide: short recap + one strong question.
 `,
     "short-viral-hook": `
-OUTPUT TYPE: SHORT VIRAL POST
-- Length: 400-800 characters
-- Structure:
-  - Single sharp insight
-  - Broken lines for readability
-  - Fast pacing
-- Style: Minimalist, provocative.
+OUTPUT TYPE: SHORT HOOK POST
+Target length: 450–850 characters.
+Body shape:
+- Hook (2 lines) based on a concrete source detail.
+- 2–3 short lines expanding the single insight.
+- Optional bullets (max 3) if it improves clarity.
+- End with a sharp question.
 `
   }
   return rules[format]
@@ -134,56 +140,105 @@ function getInstructionPrompt(
 ): string {
   const { readerContext, angle, emojiOn, tonePreset } = context
 
-  const emojiInstruction = emojiOn ? "ON (Use 1-5 naturally)" : "OFF (None)"
+  const emojiInstruction = emojiOn ? "Required (2–5). Usage is mandatory. Use relevantly to enhance meaning. Place at natural breaks." : "Do not use emojis"
 
   const regenerationInstruction = regenerate
-    ? "RETRY INSTRUCTION: The user rejected the previous output. \n1. Do NOT just paraphrase. \n2. Write a completely NEW hook (if you asked a question, make a statement). \n3. Make the tone 20% sharper/bolder."
+    ? `RETRY MODE:
+- Write a genuinely different hook + framing (not a paraphrase).
+- Change the entry point (e.g., if previous hook was a question, use a blunt statement or contrast).
+- Make it 15–25% sharper and more specific (more source detail, less abstraction).`
     : ""
 
   const formatRules = getFormatRules(format)
 
-  // "Internal Thinking" process to prevent generic summaries.
-  // We ask the model to silently analyze before writing.
-  const processInstructions = `PROCESS:
-First, silently identify the strongest "Hook" and single "Core Insight".
-Then, write the post based strictly on that angle. 
-IMPORTANT: Output ONLY the final post. Do not reveal your analysis.`
+  /**
+   * Critical upgrade: force a silent extraction step that:
+   * - selects a single failure pattern/assumption from the source
+   * - selects concrete anchors so it cannot drift into generic advice
+   * - keeps the "angle" enforced without repeating "the mistake is..."
+   */
+  const process = `PROCESS (silent, do not output):
+1) Pick ONE failure pattern from the source (assumption → consequence). If angle is provided, use it as the lens.
+2) Extract 3 "SOURCE ANCHORS" (specific terms/steps/tools/numbers). You must use at least 2 in the post.
+3) Decide the best reader takeaway for the chosen reader context.
+
+WRITE (output only the post):
+- Do NOT name the angle explicitly with template phrases (avoid "the common mistake is...").
+- Instead, make the angle obvious through examples, contrast, and repeated reinforcement in different wording.
+- Keep paragraphs to max 2 lines each.
+- No markdown styling.`
+
+  // Reader context guidance (lightweight, not persona-theatre)
+  const readerGuidance = (() => {
+    const rc = (readerContext || "").toLowerCase()
+    if (rc.includes("decision")) {
+      return `READER CONTEXT NOTE:
+Write for decision-makers: frame as trade-offs, risk, cost of wrong priorities, and operational reality. Avoid emotional self-help tone.`
+    }
+    if (rc.includes("learner") || rc.includes("student")) {
+      return `READER CONTEXT NOTE:
+Write for learners: be slightly more explanatory, but still skimmable.`
+    }
+    if (rc.includes("peer")) {
+      return `READER CONTEXT NOTE:
+Write for peers: assume baseline familiarity, be concise, no hand-holding.`
+    }
+    return `READER CONTEXT NOTE:
+Write for general LinkedIn readers: simple language, fast clarity.`
+  })()
+
+  // Angle note (kept subtle: lens, not literal)
+  const angleNote = angle
+    ? `ANGLE LENS:
+Use this lens to choose what matters and what to ignore: "${angle}".`
+    : `ANGLE LENS:
+Auto-pick the strongest single lens from the source. Ignore the rest.`
 
   return `CONTEXT:
-- Reader context: ${readerContext || "General LinkedIn readers"}
-- Angle: ${angle || "Auto-detect best angle"}
-- Tone: ${tonePreset || "Professional"}
+- Reader: ${readerContext || "General LinkedIn readers"}
+- Tone: ${tonePreset || "professional"}
 - Emojis: ${emojiInstruction}
+${angleNote}
+
+${readerGuidance}
 
 ${regenerationInstruction}
 
-${processInstructions}
+${process}
 
 ${formatRules}
 
-Formatting Constraints:
-- NO markdown bold/italic (LinkedIn doesn't support it). Use "quotes" for emphasis.
-- DO NOT start with a greeting like "Hey [Audience Name]". Start directly with the hook.
-- Max 3 hashtags at the end (contexual, not generic).
-- Use line breaks for readability.
-- Total character limit: Under ${MAX_OUTPUT_CHARS} chars.
+OUTPUT CONSTRAINTS:
+- Total length must be under ${MAX_OUTPUT_CHARS} characters.
+- Hashtags: 0–5 at the end, only if relevant to the source.
+- Emojis: ${emojiInstruction}
 
 BONUS OUTPUT (Mandatory):
-After the post, add a separator "---EXTRA_HOOKS---" and list exactly 5 alternative hooks:
-1. Contrarian Hook: [Content]
-2. Problem-first Hook: [Content]
-3. Authority Hook: [Content]
-4. Curiosity Hook: [Content]
-5. Direct promise Hook: [Content]
-(Just the first 2 lines for each hook).`
+After the post, add a separator "---EXTRA_HOOKS---" and list exactly 5 alternative hooks.
+Rules for extra hooks:
+- Each hook must be grounded in a concrete source anchor (no generic life advice).
+- Each hook must be 1–2 lines max.
+Format exactly (just the text, no labels):
+1. ...
+2. ...
+3. ...
+4. ...
+5. ...`
 }
 
 function getUserPrompt(inputText: string): string {
   const safeInput = inputText.replace(/"""/g, "'''")
+  // Inject explicit entropy to prevent cache/determinism loops
+  const entropy = `Generation Timestamp: ${Date.now()}`
+
   return `SOURCE CONTENT:
 """
 ${safeInput}
-"""`
+"""
+
+---
+User Metadata (Ignore for content, but use for sampling):
+${entropy}`
 }
 
 async function generateWithOpenAI(options: GenerateOptions): Promise<string> {
@@ -194,7 +249,11 @@ async function generateWithOpenAI(options: GenerateOptions): Promise<string> {
 
   const openai = new OpenAI({ apiKey })
   const systemPrompt = getSystemPrompt()
-  const instructionPrompt = getInstructionPrompt(options.format, options.context, options.regenerate || false)
+  const instructionPrompt = getInstructionPrompt(
+    options.format,
+    options.context,
+    options.regenerate || false
+  )
   const userPrompt = getUserPrompt(options.inputText)
 
   try {
@@ -204,8 +263,9 @@ async function generateWithOpenAI(options: GenerateOptions): Promise<string> {
         { role: "system", content: systemPrompt },
         { role: "user", content: `${instructionPrompt}\n\n${userPrompt}` }
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      // Slightly lower temp = less generic motivational drift
+      temperature: 0.6,
+      max_tokens: 1800
     })
 
     const text = response.choices[0].message.content
@@ -222,11 +282,6 @@ async function generateWithOpenAI(options: GenerateOptions): Promise<string> {
 /**
  * Main entry point for generating LinkedIn content.
  * Handles normalization, validation, and race-conditions (timeouts).
- *
- * @param format - The target LinkedIn post format
- * @param inputText - The raw source text
- * @param context - Configuration for tone, audience, etc.
- * @param regenerate - Whether this is a retry (triggers stricter prompts)
  */
 export async function generateLinkedInFormat(
   format: LinkedInFormat,

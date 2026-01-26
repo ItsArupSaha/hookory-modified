@@ -47,10 +47,10 @@ export class AiService {
             )
 
             let output = null
-            if (!regenerate) {
-                // Try to fetch from cache first to save costs/time
-                output = await getCachedOutput(cacheKey)
-            }
+            // DISABLE CACHE: User wants fresh output for every token spent.
+            // if (!regenerate) {
+            //    output = await getCachedOutput(cacheKey)
+            // }
 
             if (output) {
                 outputs[format] = output
