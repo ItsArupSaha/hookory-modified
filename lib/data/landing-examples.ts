@@ -81,7 +81,9 @@ Where did you go wrong?
   },
 
   "story-based": {
-    content: `I took a deep breath and cracked open my notebook, ready to map out my path in web development. The blank pages stared back at me, but I knew one thing for sure: the landscape is changing. Many believe that if you haven’t jumped into web development yet, it’s too late. But that’s simply not true. 
+    content: `I took a deep breath and cracked open my notebook, ready to map out my path in web development. 
+    
+The blank pages stared back at me, but I knew one thing for sure: the landscape is changing. Many believe that if you haven’t jumped into web development yet, it’s too late. But that’s simply not true. 
 
 The reality is, as tech evolves, the web is still the backbone of communication and creativity. The US Bureau of Labor Statistics predicts a 7% increase in web developer jobs from 2024 to 2034. This field is not dying; it’s thriving! 🚀 
 
@@ -122,7 +124,9 @@ So, are you still waiting? The world of web development is waiting for you. Tell
   },
 
   "short-viral-hook": {
-    content: `Stop thinking web development is dying. It's killing your career prospects. 🚫 According to the US Bureau of Labor Statistics, jobs in this field are projected to rise by 7% from 2024 to 2034. The web is more than a tool—it's the backbone of modern business, creativity, and communication.
+    content: `Stop thinking web development is dying. It's killing your career prospects. 🚫 
+    
+According to the US Bureau of Labor Statistics, jobs in this field are projected to rise by 7% from 2024 to 2034. The web is more than a tool—it's the backbone of modern business, creativity, and communication.
 
 Many people assume it's too late to learn web development, but that couldn't be further from the truth. The right mindset and roadmap can take you from beginner to employed developer. Start by mastering HTML, CSS, and JavaScript. Then specialize in front-end or back-end development. 💻
 

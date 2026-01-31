@@ -109,7 +109,7 @@ export function FeaturesSection() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <div className="rounded-md border border-rose-50 bg-rose-50/20 px-3 py-2 text-[12px] text-slate-800 whitespace-pre-wrap leading-relaxed">
+                            <div className="rounded-md border border-rose-50 bg-rose-50/20 px-3 py-2 text-[12px] text-slate-800 whitespace-pre-wrap leading-relaxed max-h-[200px] overflow-y-auto">
                                 {GENERATED_POSTS["short-viral-hook"].content}
                             </div>
 
